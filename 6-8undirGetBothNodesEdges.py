@@ -3,100 +3,61 @@ import functools
 import graphviz as gv
 from graphviz import Source
 
-bad_words = [ 'jns', 'js', 'jnz', 'jz', 'jno', 'jo', 'jbe', 'jb', 'jle', 'jl', 'jae', 'ja', 'jne loc', 'je', 'jmp', 'jge', 'jg', 'SLICE_EXTRA', 'SLICE_ADDRESSING', '[BUG]', 'SLICE_VERIFICATION', 'syscall', '#PARAMS_LOG']
 
-instrEdges = []
-instrNodes = []
-
-fileName = 'smallCleanedNewSlice.txt'
+fileName = 'cleanedExSlice.asm'
 #fileName = '200CleanedSlice.txt'
-outFileName = 'smallUndirOutputGraph.txt'
+outFileName = 'cleanedExGraph.txt'
 #outFileName = '200UndirOutputGraph.txt'
-renderFileName = 'test-output/smallUndirDataFlowSliceWes.gv'
+renderFileName = 'test-output/cleanedExGraphWes.gv'
 #renderFileName = 'test-output/200UndirDataFlowSliceWes.gv'
 
 k = 1 
-#get the nodes with their appropraite line numbers
+y = 1 
+memAddressList = []
+nodeCount = -1
+instrEdges = []
+instrNodes = []
+
+#get the instrNodes with their appropraite line numbers
 with open(fileName) as oldfile:
     for line in oldfile:
-        tempLine = line.split()
-        print(tempLine)
-        if (len(tempLine)) >= 2 and tempLine[0] != '[SLICE_ADDRESSING]':
-            instrNodes.append('[' +str (k) + '] '+tempLine[1] + '-' + tempLine[2])
-            k = k + 1 
-        if(tempLine[0] == '[SLICE_ADDRESSING]'):
-            k = k + 1
+        splitLine = line.split()
 
-i=0
-for x in instrNodes:
-    instrNodes[i] = x.replace("#", "")
-    i += 1
+        tempEdgeList = []
 
-#list of nodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
-print('Done! Instruction Nodes List Size is : ') 
+        #if not a system call in the cleanedExSlice then must be a normal slice Instruction 
+        #and only add the first word + its line number as a single node 
+        if (splitLine[0] != 'call'):
+            instrNodes.append('[' +str (k) + '] '+splitLine[0])
+            
+
+            for idx, words in enumerate(splitLine):
+                if (idx != 0):
+                    if ((splitLine[idx] != 'dword') and (splitLine[idx] != 'ptr') and (splitLine[idx] != 'byte')):
+                        if('[0x' in splitLine[idx]):
+                            memAddressList.append(splitLine[idx])
+                        tempEdgeList.append(splitLine[idx])
+        #else must be a system call so include both first two words + its line number
+        else:
+            instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
+        k = k + 1
+        instrEdges.append(tempEdgeList) 
+
+
+#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
+print('Done! Instruction instrNodes List Size is : ') 
 print(len(instrNodes))
 
-memAddressList = []
+#print(instrNodes)
+#print(instrEdges)
 
-nodeCount = -1
-
-pattern = '\s+(\S+)\s'
-with open(fileName) as oldfile:
-    for line in oldfile:
-        prepline = line.replace("#\S*", " r1 ")
-        prepline = prepline.replace("[SLICE_INFO]", " r2 ")
-        prepline = prepline.replace("[SLICE_INFO]", " r2 ")
-        prepline = prepline.replace("[SLICE]", " r3 ")
-
-        prepline = prepline.replace("[SLICE_ADDRESSING]", " r4 ")
-        prepline = prepline.replace("[SLICE_ADDRESSING]", " r4 ")
-        prepline = prepline.replace("$addr(", " r5 ")
-        prepline = prepline.replace(")", " r6 ")
-        prepline = prepline.replace("\t", " \t ")
-        prepline = prepline.rstrip("\t")
-        prepline = re.sub(r'(\s)#\w+', r'\1', prepline)
-        prepline = re.sub(r'.*SLICE', '', prepline)
-        prepline = re.sub(r'(\s)SLICE\s+', r'\1', prepline)
-        prepline = re.sub(r'(\s)immediate_address\s+', r'\1', prepline)
-        prepline = re.sub(r'(\s)$addr\s+', r'\1', prepline)
-        prepline = re.sub(r'(\s)dword ptr\s+', r'\1', prepline)
-        splitList = re.split("r1 | r2 | \t | r3 | r4 | r5 | r6", prepline)
-
-        print(splitList)
-
-        if (len(splitList) >=3) and '0x' not in splitList[2]:
-            tempEdge = splitList[1]
-            tempEdge = tempEdge.lstrip()
-            instrEdges.append(tempEdge)
-            nodeCount = nodeCount+1
-            #print tempEdges
-            #print len(splitList)   
-        elif (len(splitList) <=2) and '0x' not in splitList[1]: 
-            tempEdge = splitList[1]
-            tempEdge = tempEdge.lstrip() 
-            instrEdges.append(tempEdge)
-            #print ('hello: '+tempEdge)
-            nodeCount = nodeCount+1
-        if (len(splitList) >=3) and '0x' in splitList[2]:
-            memAddr = splitList[2]
-            memAddr = memAddr.lstrip()
-            #replaces the brackets dword ptr [edi] with the actual mem address from line [SLICE_ADDRESSING]
-            cleanedEdge = re.sub(r"[\(\[].*?[\)\]]", memAddr, instrEdges[nodeCount])
-            instrEdges[nodeCount] = cleanedEdge
-            memAddressList.append(memAddr)
-
-print('List of Memory Addresses used in Slice : ')
 print(memAddressList)
 
-#list of edges in the format ['eax, 0xfffff001', 'eax, 0x33']
 
 print('Done! Instruction Edges List size is : ')
 print(len(instrEdges))
 #print(instrEdges)
 
-#add line number to node names
-#for idx, s in enumerate(instrNodes):
-#    instrNodes[idx] = '[' +str (idx) + '] ' + s
 
 nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
 #example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
@@ -124,10 +85,10 @@ graph = functools.partial(gv.Graph, format='svg')
 digraph = functools.partial(gv.Digraph, format='svg')
 
 datG = graph()
-#list of nodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
-nodes = instrNodes
+#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
+#instrNodes
 #list of edges in the format ['eax, 0xfffff001', 'eax, 0x33']
-edges = instrEdges
+#nstrEdges
 
 #This block of code is hacky way to get rid of duplicates in memAddressList
 #print(memAddressList)
@@ -136,16 +97,11 @@ memAddressDict = {k: v for k, v in zip(memAddressList, memAddressList)}
 #print(memAddressList)
 
 
-
 def add_nodes(graph):
-    for n in nodes:
+    for n in instrNodes:
         graph.node(n, label = str(n) + '(' + str(nodeEdgesDict[n]) + ')')
     return graph
 
-def add_edges(graph):
-    for e in edges:
-        graph.edge(*e)
-    return graph
 
 statusFlags = [] 
 datG.node('R', 'Root')
@@ -331,7 +287,7 @@ tealInst = [
 
 # one source specified in slice AND one implicit source and one implicit destination output 
 redInst = [
-#MUL the explicit soure is specified in slice AX or DX:AX or EDX:EAX is the implicit source
+#MUL the explicit soure is specified in slice, and AX or DX:AX or EDX:EAX is the implicit source
 'mul',
 ]
 
@@ -359,12 +315,10 @@ pinkInst = [
 
 pattern = re.compile("^\s+|\s*,\s*|\s+$")
 for idx, c in enumerate(instrEdges):
-    splitStr = [a for a in pattern.split(c) if a]
 
-    #print('splitStr ' + str(idx) + ' ' + str(splitStr))
-
-    for idz, b in enumerate(splitStr):
+    for idz, b in enumerate(instrEdges[idx]):
         tempNodeStr = instrNodes[(idx)]
+        splitStr = instrEdges[idx]
 
         #input edges for orangeInstructions, such as 'mov' they only have one 1 source(second arg)         
         if idz == 1:
@@ -661,80 +615,80 @@ for idx, c in enumerate(instrEdges):
                 if ((any(x in tempNodeStr for x in orangeInst)) or (any(x in tempNodeStr for x in goldInst)) or (any(x in tempNodeStr for x in greenInst)) or (any(x in tempNodeStr for x in purpInst))):
                     # if dest reg is eax
                     if splitStr[idz] == "eax":
-                        modifyEAX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "ax":
-                        modifyAX(nodes[idx],nodes[idx])
+                        modifyAX(instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "ah":
-                        modifyAH(nodes[idx])
+                        modifyAH(instrNodes[idx])
                     elif splitStr[idz] == "al":
-                        modifyAL(nodes[idx])
+                        modifyAL(instrNodes[idx])
                     #    
                     # elif dest reg is ecx
                     elif splitStr[idz] == "ecx":
-                        modifyECX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyECX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "cx":
-                        modifyCX(nodes[idx],nodes[idx])
+                        modifyCX(instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "ch":
-                        modifyCH(nodes[idx])
+                        modifyCH(instrNodes[idx])
                     elif splitStr[idz] == "cl":
-                        modifyCL(nodes[idx])
+                        modifyCL(instrNodes[idx])
                     #    
                     # elif dest reg is edx
                     elif splitStr[idz] == "edx":
-                        modifyEDX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEDX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "dx":
-                        modifyDX(nodes[idx],nodes[idx])
+                        modifyDX(instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "dh":
-                        modifyDH(nodes[idx])
+                        modifyDH(instrNodes[idx])
                     elif splitStr[idz] == "dl":
-                        modifyDL(nodes[idx])
+                        modifyDL(instrNodes[idx])
                     #    
                     # elif dest reg is ebx
                     elif splitStr[idz] == "ebx":
-                        modifyEBX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEBX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "bx":
-                        modifyBX(nodes[idx],nodes[idx])
+                        modifyBX(instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "bh":
-                        modifyBH(nodes[idx])
+                        modifyBH(instrNodes[idx])
                     elif splitStr[idz] == "bl":
-                        modifyBL(nodes[idx])
+                        modifyBL(instrNodes[idx])
                     #
                     # elif dest reg is esp
                     elif splitStr[idz] == "esp":
-                        modifyESP(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyESP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "sp":
-                        modifySP(nodes[idx],nodes[idx])
+                        modifySP(instrNodes[idx],instrNodes[idx])
                     # elif dest reg is ebp
                     elif splitStr[idz] == "ebp":
-                        modifyEBP(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEBP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "ebp":
-                        modifyBP(nodes[idx],nodes[idx])     
+                        modifyBP(instrNodes[idx],instrNodes[idx])     
                     # elif dest reg is esi
                     elif splitStr[idz] == "esi":
-                        modifyESI(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyESI(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "esi":
-                        modifySI(nodes[idx],nodes[idx])      
+                        modifySI(instrNodes[idx],instrNodes[idx])      
                     # elif dest reg is edi
                     elif splitStr[idz] == "edi":
-                        modifyEDI(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEDI(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif splitStr[idz] == "di":
-                        modifyDI(nodes[idx],nodes[idx])
+                        modifyDI(instrNodes[idx],instrNodes[idx])
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
-                            memAddressDict[splitStr[idz]] = nodes[idx]
+                            memAddressDict[splitStr[idz]] = instrNodes[idx]
         if idz == 0:
                if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in tealInst) or any(x in tempNodeStr for x in greyInst)):
                     if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in tealInst)):
-                        modifyESP(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyESP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     elif (any(x in tempNodeStr for x in greyInst)):
-                        modifyEAX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
-                        modifyEDX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
+                        modifyEDX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     #if must be redInst
                     elif (any(x in tempNodeStr for x in redInst)):
-                        modifyEAX(nodes[idx],nodes[idx],nodes[idx],nodes[idx])
+                        modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
-                            memAddressDict[splitStr[idz]] = nodes[idx]
+                            memAddressDict[splitStr[idz]] = instrNodes[idx]
 
        
         if idz == 1:     

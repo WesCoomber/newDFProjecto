@@ -14,6 +14,8 @@ with open('exslice.asm') as oldfile, open('cleanedExSlice.asm', 'w') as newfile:
 	    		sliceStarted = True
 	    	if (not line.startswith('/* slice finishes')):
 	    		prepline = re.sub("/\*(.|\n)*?\*/", '', line)
+	    		prepline = re.sub(",", '', prepline)
+	    		prepline = re.sub(' +',' ', prepline)
 	    	else: 
 	    		sliceEnd = True
 	    		break
