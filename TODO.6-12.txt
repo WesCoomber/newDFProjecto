@@ -1,0 +1,6 @@
+TODO.6-12
+
+ask xz about the reg mapping 
+generate dict of unique nodes and verify that you handle all instructions.
+link syscalls to insturctions
+make the instructions end in ultimate outputs
