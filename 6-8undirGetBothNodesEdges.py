@@ -49,7 +49,7 @@ print('Done! Instruction instrNodes List Size is : ')
 print(len(instrNodes))
 
 #print(instrNodes)
-#print(instrEdges)
+print(instrEdges)
 
 print(memAddressList)
 
@@ -285,9 +285,9 @@ orangeInst = [
 'cmovnz',
 'cmovs',
 'dec',
-'lea',
 'movsx',
 'movzx',
+'lea',
 ]
 
 
@@ -306,6 +306,7 @@ goldInst = [
 'shr',
 'shl',
 'or',
+
 ]
 
 #green instructions "dest reg or mem location modified as output edge" and three 3 sources
@@ -362,189 +363,302 @@ for idx, c in enumerate(instrEdges):
         tempNodeStr = instrNodes[(idx)]
         splitStr = instrEdges[idx]
 
-        #input edges for orangeInstructions, such as 'mov' they only have one 1 source(second arg)         
+        #input edges for orangeInstructions, such as 'mov' they only have one 1 source(second arg). dest, src        
         if idz == 1:
                 if any(x in tempNodeStr for x in orangeInst):
-                    #print('debug ' + tempNodeStr)
-                     #Eax edges 
-                    if splitStr[idz] == "eax":
-                        for ido, k in enumerate(EAX):
-                            datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
-                    elif splitStr[idz] == "ax":
-                        for ido, k in enumerate(EAX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
-                    elif splitStr[idz] == "ah":
-                        for ido, k in enumerate(EAX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
-                    elif splitStr[idz] == "al":
-                        for ido, k in enumerate(EAX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
-                    #Ecx edges 
-                    elif splitStr[idz] == "ecx":
-                        for ido, k in enumerate(ECX):
-                            datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
-                    elif splitStr[idz] == "cx":
-                        for ido, k in enumerate(ECX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
-                    elif splitStr[idz] == "ch":
-                        for ido, k in enumerate(ECX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
-                    elif splitStr[idz] == "cl":
-                        for ido, k in enumerate(ECX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
-                    #
-                    #Edx edges 
-                    elif splitStr[idz] == "edx":
-                        for ido, k in enumerate(EDX):
-                            datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
-                    elif splitStr[idz] == "dx":
-                        for ido, k in enumerate(EDX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
-                    elif splitStr[idz] == "dh":
-                        for ido, k in enumerate(EDX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
-                    elif splitStr[idz] == "dl":
-                        for ido, k in enumerate(EDX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
-                    #
-                    #Ebx edges 
-                    elif splitStr[idz] == "ebx":
-                        for ido, k in enumerate(EBX):
-                            datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
-                    elif splitStr[idz] == "bx":
-                        for ido, k in enumerate(EBX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
-                    elif splitStr[idz] == "bh":
-                        for ido, k in enumerate(EBX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
-                    elif splitStr[idz] == "bl":
-                        for ido, k in enumerate(EBX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
-                    #esp edges
-                    elif splitStr[idz] == "esp":
-                        for ido, k in enumerate(ESP):
-                            datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
-                    elif splitStr[idz] == "sp":
-                        for ido, k in enumerate(ESP[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
-                    #
-                    #ebp edges
-                    elif splitStr[idz] == "ebp":
-                        for ido, k in enumerate(EBP):
-                            datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
-                    elif splitStr[idz] == "bp":
-                        for ido, k in enumerate(EBP[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
-                    #
-                    #esi edges
-                    elif splitStr[idz] == "esi":
-                        for ido, k in enumerate(ESI):
-                            datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
-                    elif splitStr[idz] == "si":
-                        for ido, k in enumerate(ESI[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
-                    #
-                    #
-                    elif splitStr[idz] == "edi":
-                        for ido, k in enumerate(EDI):
-                            datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
-                    elif splitStr[idz] == "di":
-                        for ido, k in enumerate(EDI[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
-                    #
-                    else:
-                        if splitStr[idz] in (memAddressDict.keys()):
-                            for i in range(4):
-                                datG.edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
+
+                    isMultipleRegs = False
+
+                    #6-8 some extra "movzx eax byte ptr [edi+ecx*1]" handling, 
+                    if ((splitStr[idz])[:2]) == '[e':
+                        #put into a dict to remove duplicates from the list of source registers
+                        tempDict = {}
+                        print(tempNodeStr)
+
+                        splitStr[idz] = splitStr[idz].replace('[', '')
+                       
+                        tempStrList = (splitStr[idz]).split('+')
+                        workingList = tempStrList[1].split('*')
+                        tempStrList[1] = workingList[0]
+                        #print ('tempStrList: ' + splitStr[idz] + ' ' +str(tempStrList))
+                        splitStr[idz] = tempStrList
+                        #print (splitStr[idz])
+                        dupChkDict = {k: v for k, v in zip(tempStrList, tempStrList)}
+                        if len(dupChkDict.keys()) <= 1:
+                            #print ('1' + str(dupChkDict.keys()))
+                            isMultipleRegs = False
                         else:
-                            pass
-                            #datG.edge('R', tempNodeStr, label= k +'(imm)'+str(1))   
+                            #print ('2' + str(dupChkDict.keys()))
+                            isMultipleRegs = True
+
+                    if (isMultipleRegs == True):
+                             #Eax edges 
+                        if 'eax' in splitStr[idz]:
+                            for ido, k in enumerate(EAX):
+                                datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+                        if 'ax' in splitStr[idz]:
+                            for ido, k in enumerate(EAX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
+                        if 'ah' in splitStr[idz]:
+                            for ido, k in enumerate(EAX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
+                        if 'al' in splitStr[idz]:
+                            for ido, k in enumerate(EAX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
+                        #Ecx edges 
+                        if 'ecx' in splitStr[idz]:
+                            for ido, k in enumerate(ECX):
+                                datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
+                        if 'cx' in splitStr[idz]:
+                            for ido, k in enumerate(ECX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
+                        if 'ch' in splitStr[idz]:
+                            for ido, k in enumerate(ECX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
+                        if 'cl' in splitStr[idz]:
+                            for ido, k in enumerate(ECX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
+                        #
+                        #Edx edges 
+                        if 'edx' in splitStr[idz]:
+                            for ido, k in enumerate(EDX):
+                                datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
+                        if 'dx' in splitStr[idz]:
+                            for ido, k in enumerate(EDX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
+                        if 'dh' in splitStr[idz]:
+                            for ido, k in enumerate(EDX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
+                        if 'dl' in splitStr[idz]:
+                            for ido, k in enumerate(EDX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
+                        #
+                        #Ebx edges 
+                        if 'ebx' in splitStr[idz]:
+                            for ido, k in enumerate(EBX):
+                                datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
+                        if 'bx' in splitStr[idz]:
+                            for ido, k in enumerate(EBX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
+                        if 'bh' in splitStr[idz]:
+                            for ido, k in enumerate(EBX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
+                        if 'bl' in splitStr[idz]:
+                            for ido, k in enumerate(EBX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
+                        #esp edges
+                        if 'esp' in splitStr[idz]:
+                            for ido, k in enumerate(ESP):
+                                datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
+                        if 'sp' in splitStr[idz]:
+                            for ido, k in enumerate(ESP[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
+                        #
+                        #ebp edges
+                        if 'ebp' in splitStr[idz]:
+                            for ido, k in enumerate(EBP):
+                                datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                        if 'bp' in splitStr[idz]:
+                            for ido, k in enumerate(EBP[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                        #
+                        #esi edges
+                        if 'esi' in splitStr[idz]:
+                            for ido, k in enumerate(ESI):
+                                datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
+                        if 'si' in splitStr[idz]:
+                            for ido, k in enumerate(ESI[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
+                        #
+                        #
+                        if 'edi' in splitStr[idz]:
+                            for ido, k in enumerate(EDI):
+                                datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
+                        if 'di' in splitStr[idz]:
+                            for ido, k in enumerate(EDI[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
+                        #
+
+                    else:
+                         #Eax edges 
+                        if 'eax' in splitStr[idz]:
+                            for ido, k in enumerate(EAX):
+                                datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+                        elif 'ax' in splitStr[idz]:
+                            for ido, k in enumerate(EAX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
+                        elif 'ah' in splitStr[idz]:
+                            for ido, k in enumerate(EAX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
+                        elif 'al' in splitStr[idz]:
+                            for ido, k in enumerate(EAX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
+                        #Ecx edges 
+                        elif 'ecx' in splitStr[idz]:
+                            for ido, k in enumerate(ECX):
+                                datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
+                        elif 'cx' in splitStr[idz]:
+                            for ido, k in enumerate(ECX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
+                        elif 'ch' in splitStr[idz]:
+                            for ido, k in enumerate(ECX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
+                        elif 'cl' in splitStr[idz]:
+                            for ido, k in enumerate(ECX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
+                        #
+                        #Edx edges 
+                        elif 'edx' in splitStr[idz]:
+                            for ido, k in enumerate(EDX):
+                                datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
+                        elif 'dx' in splitStr[idz]:
+                            for ido, k in enumerate(EDX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
+                        elif 'dh' in splitStr[idz]:
+                            for ido, k in enumerate(EDX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
+                        elif 'dl' in splitStr[idz]:
+                            for ido, k in enumerate(EDX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
+                        #
+                        #Ebx edges 
+                        elif 'ebx' in splitStr[idz]:
+                            for ido, k in enumerate(EBX):
+                                datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
+                        elif 'bx' in splitStr[idz]:
+                            for ido, k in enumerate(EBX[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
+                        elif 'bh' in splitStr[idz]:
+                            for ido, k in enumerate(EBX[2:3]):
+                                datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
+                        elif 'bl' in splitStr[idz]:
+                            for ido, k in enumerate(EBX[3:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
+                        #esp edges
+                        elif 'esp' in splitStr[idz]:
+                            for ido, k in enumerate(ESP):
+                                datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
+                        elif 'sp' in splitStr[idz]:
+                            for ido, k in enumerate(ESP[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
+                        #
+                        #ebp edges
+                        elif 'ebp' in splitStr[idz]:
+                            for ido, k in enumerate(EBP):
+                                datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                        elif 'bp' in splitStr[idz]:
+                            for ido, k in enumerate(EBP[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                        #
+                        #esi edges
+                        elif 'esi' in splitStr[idz]:
+                            for ido, k in enumerate(ESI):
+                                datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
+                        elif 'si' in splitStr[idz]:
+                            for ido, k in enumerate(ESI[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
+                        #
+                        #
+                        elif 'edi' in splitStr[idz]:
+                            for ido, k in enumerate(EDI):
+                                datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
+                        elif 'di' in splitStr[idz]:
+                            for ido, k in enumerate(EDI[2:4]):
+                                datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
+                        #
+                        else:
+                            if splitStr[idz] in (memAddressDict.keys()):
+                                for i in range(4):
+                                    datG.edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
+                            else:
+                                pass
+                                #datG.edge('R', tempNodeStr, label= k +'(imm)'+str(1))   
         #THIS IS FOR BLUE INSTRUCTIONS, WHICH ARE INSTRUCTIONS THAT HAVE ONLY ONE EXPLICIT ARGUMENT IN THE SLICE
         #PUSH IS NOT RIGHT>?
         if idz == 0:
                if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in greyInst)):
-                    if splitStr[idz] == "eax":
+                    if 'eax' in splitStr[idz]:
                         for ido, k in enumerate(EAX):
                             datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
-                    elif splitStr[idz] == "ax":
+                    elif 'ax' in splitStr[idz]:
                         for ido, k in enumerate(EAX[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
-                    elif splitStr[idz] == "ah":
+                    elif 'ah' in splitStr[idz]:
                         for ido, k in enumerate(EAX[2:3]):
                             datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
-                    elif splitStr[idz] == "al":
+                    elif 'al' in splitStr[idz]:
                         for ido, k in enumerate(EAX[3:4]):
                             datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
                     #Ecx edges 
-                    elif splitStr[idz] == "ecx":
+                    elif 'ecx' in splitStr[idz]:
                         for ido, k in enumerate(ECX):
                             datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
-                    elif splitStr[idz] == "cx":
+                    elif 'cx' in splitStr[idz]:
                         for ido, k in enumerate(ECX[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
-                    elif splitStr[idz] == "ch":
+                    elif 'ch' in splitStr[idz]:
                         for ido, k in enumerate(ECX[2:3]):
                             datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
-                    elif splitStr[idz] == "cl":
+                    elif 'cl' in splitStr[idz]:
                         for ido, k in enumerate(ECX[3:4]):
                             datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
                     #
                     #Edx edges 
-                    elif splitStr[idz] == "edx":
+                    elif 'edx' in splitStr[idz]:
                         for ido, k in enumerate(EDX):
                             datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
-                    elif splitStr[idz] == "dx":
+                    elif 'dx' in splitStr[idz]:
                         for ido, k in enumerate(EDX[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
-                    elif splitStr[idz] == "dh":
+                    elif 'dh' in splitStr[idz]:
                         for ido, k in enumerate(EDX[2:3]):
                             datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
-                    elif splitStr[idz] == "dl":
+                    elif 'dl' in splitStr[idz]:
                         for ido, k in enumerate(EDX[3:4]):
                             datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
                     #
                     #Ebx edges 
-                    elif splitStr[idz] == "ebx":
+                    elif 'ebx' in splitStr[idz]:
                         for ido, k in enumerate(EBX):
                             datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
-                    elif splitStr[idz] == "bx":
+                    elif 'bx' in splitStr[idz]:
                         for ido, k in enumerate(EBX[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
-                    elif splitStr[idz] == "bh":
+                    elif 'bh' in splitStr[idz]:
                         for ido, k in enumerate(EBX[2:3]):
                             datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
-                    elif splitStr[idz] == "bl":
+                    elif 'bl' in splitStr[idz]:
                         for ido, k in enumerate(EBX[3:4]):
                             datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
                     #esp edges
-                    elif splitStr[idz] == "esp":
+                    elif 'esp' in splitStr[idz]:
                         for ido, k in enumerate(ESP):
                             datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
-                    elif splitStr[idz] == "sp":
+                    elif 'sp' in splitStr[idz]:
                         for ido, k in enumerate(ESP[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
                     #
                     #ebp edges
-                    elif splitStr[idz] == "ebp":
+                    elif 'ebp' in splitStr[idz]:
                         for ido, k in enumerate(EBP):
                             datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
-                    elif splitStr[idz] == "bp":
+                    elif 'bp' in splitStr[idz]:
                         for ido, k in enumerate(EBP[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
                     #
                     #esi edges
-                    elif splitStr[idz] == "esi":
+                    elif 'esi' in splitStr[idz]:
                         for ido, k in enumerate(ESI):
                             datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
-                    elif splitStr[idz] == "si":
+                    elif 'si' in splitStr[idz]:
                         for ido, k in enumerate(ESI[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
                     #
                     #
-                    elif splitStr[idz] == "edi":
+                    elif 'edi' in splitStr[idz]:
                         for ido, k in enumerate(EDI):
                             datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
-                    elif splitStr[idz] == "di":
+                    elif 'di' in splitStr[idz]:
                         for ido, k in enumerate(EDI[2:4]):
                             datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
                     #
@@ -558,89 +672,91 @@ for idx, c in enumerate(instrEdges):
 
         #input edges , cmp has for each argument passed in (a AND b) as 2 sources
         if ((any(x in tempNodeStr for x in pinkInst)) or (any(x in tempNodeStr for x in goldInst))):
+
+
             #Eax edges 
-            if splitStr[idz] == "eax":
+            if 'eax' in splitStr[idz]:
                 for ido, k in enumerate(EAX):
                     datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
-            elif splitStr[idz] == "ax":
+            elif 'ax' in splitStr[idz]:
                 for ido, k in enumerate(EAX[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
-            elif splitStr[idz] == "ah":
+            elif 'ah' in splitStr[idz]:
                 for ido, k in enumerate(EAX[2:3]):
                     datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
-            elif splitStr[idz] == "al":
+            elif 'al' in splitStr[idz]:
                 for ido, k in enumerate(EAX[3:4]):
                     datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
             #Ecx edges 
-            elif splitStr[idz] == "ecx":
+            elif 'ecx' in splitStr[idz]:
                 for ido, k in enumerate(ECX):
                     datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
-            elif splitStr[idz] == "cx":
+            elif 'cx' in splitStr[idz]:
                 for ido, k in enumerate(ECX[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
-            elif splitStr[idz] == "ch":
+            elif 'ch' in splitStr[idz]:
                 for ido, k in enumerate(ECX[2:3]):
                     datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
-            elif splitStr[idz] == "cl":
+            elif 'cl' in splitStr[idz]:
                 for ido, k in enumerate(ECX[3:4]):
                     datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
             #
             #Edx edges 
-            elif splitStr[idz] == "edx":
+            elif 'edx' in splitStr[idz]:
                 for ido, k in enumerate(EDX):
                     datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
-            elif splitStr[idz] == "dx":
+            elif 'dx' in splitStr[idz]:
                 for ido, k in enumerate(EDX[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
-            elif splitStr[idz] == "dh":
+            elif 'dh' in splitStr[idz]:
                 for ido, k in enumerate(EDX[2:3]):
                     datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
-            elif splitStr[idz] == "dl":
+            elif 'dl' in splitStr[idz]:
                 for ido, k in enumerate(EDX[3:4]):
                     datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
             #
             #Ebx edges 
-            elif splitStr[idz] == "ebx":
+            elif 'ebx' in splitStr[idz]:
                 for ido, k in enumerate(EBX):
                     datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
-            elif splitStr[idz] == "bx":
+            elif 'bx' in splitStr[idz]:
                 for ido, k in enumerate(EBX[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
-            elif splitStr[idz] == "bh":
+            elif 'bh' in splitStr[idz]:
                 for ido, k in enumerate(EBX[2:3]):
                     datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
-            elif splitStr[idz] == "bl":
+            elif 'bl' in splitStr[idz]:
                 for ido, k in enumerate(EBX[3:4]):
                     datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
             #esp edges
-            elif splitStr[idz] == "esp":
+            elif 'esp' in splitStr[idz]:
                 for ido, k in enumerate(ESP):
                     datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
-            elif splitStr[idz] == "sp":
+            elif 'sp' in splitStr[idz]:
                 for ido, k in enumerate(ESP[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
             #
             #ebp edges
-            elif splitStr[idz] == "ebp":
+            elif 'ebp' in splitStr[idz]:
                 for ido, k in enumerate(EBP):
                     datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
-            elif splitStr[idz] == "bp":
+            elif 'bp' in splitStr[idz]:
                 for ido, k in enumerate(EBP[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
             #
             #esi edges
-            elif splitStr[idz] == "esi":
+            elif 'esi' in splitStr[idz]:
                 for ido, k in enumerate(ESI):
                     datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
-            elif splitStr[idz] == "si":
+            elif 'si' in splitStr[idz]:
                 for ido, k in enumerate(ESI[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
             #
             #
-            elif splitStr[idz] == "edi":
+            elif 'edi' in splitStr[idz]:
                 for ido, k in enumerate(EDI):
                     datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
-            elif splitStr[idz] == "di":
+            elif 'di' in splitStr[idz]:
                 for ido, k in enumerate(EDI[2:4]):
                     datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
             #
@@ -656,64 +772,64 @@ for idx, c in enumerate(instrEdges):
         if idz == 0:
                 if ((any(x in tempNodeStr for x in orangeInst)) or (any(x in tempNodeStr for x in goldInst)) or (any(x in tempNodeStr for x in greenInst)) or (any(x in tempNodeStr for x in purpInst))):
                     # if dest reg is eax
-                    if splitStr[idz] == "eax":
+                    if 'eax' in splitStr[idz]:
                         modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "ax":
+                    elif 'ax' in splitStr[idz]:
                         modifyAX(instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "ah":
+                    elif 'ah' in splitStr[idz]:
                         modifyAH(instrNodes[idx])
-                    elif splitStr[idz] == "al":
+                    elif 'al' in splitStr[idz]:
                         modifyAL(instrNodes[idx])
                     #    
                     # elif dest reg is ecx
-                    elif splitStr[idz] == "ecx":
+                    elif 'ecx' in splitStr[idz]:
                         modifyECX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "cx":
+                    elif 'cx' in splitStr[idz]:
                         modifyCX(instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "ch":
+                    elif 'ch' in splitStr[idz]:
                         modifyCH(instrNodes[idx])
-                    elif splitStr[idz] == "cl":
+                    elif 'cl' in splitStr[idz]:
                         modifyCL(instrNodes[idx])
                     #    
                     # elif dest reg is edx
-                    elif splitStr[idz] == "edx":
+                    elif 'edx' in splitStr[idz]:
                         modifyEDX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "dx":
+                    elif 'dx' in splitStr[idz]:
                         modifyDX(instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "dh":
+                    elif 'dh' in splitStr[idz]:
                         modifyDH(instrNodes[idx])
-                    elif splitStr[idz] == "dl":
+                    elif 'dl' in splitStr[idz]:
                         modifyDL(instrNodes[idx])
                     #    
                     # elif dest reg is ebx
-                    elif splitStr[idz] == "ebx":
+                    elif 'ebx' in splitStr[idz]:
                         modifyEBX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "bx":
+                    elif 'bx' in splitStr[idz]:
                         modifyBX(instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "bh":
+                    elif 'bh' in splitStr[idz]:
                         modifyBH(instrNodes[idx])
-                    elif splitStr[idz] == "bl":
+                    elif 'bl' in splitStr[idz]:
                         modifyBL(instrNodes[idx])
                     #
                     # elif dest reg is esp
-                    elif splitStr[idz] == "esp":
+                    elif 'esp' in splitStr[idz]:
                         modifyESP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "sp":
+                    elif 'sp' in splitStr[idz]:
                         modifySP(instrNodes[idx],instrNodes[idx])
                     # elif dest reg is ebp
-                    elif splitStr[idz] == "ebp":
+                    elif 'ebp' in splitStr[idz]:
                         modifyEBP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "ebp":
+                    elif 'ebp' in splitStr[idz]:
                         modifyBP(instrNodes[idx],instrNodes[idx])     
                     # elif dest reg is esi
-                    elif splitStr[idz] == "esi":
+                    elif 'esi' in splitStr[idz]:
                         modifyESI(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "esi":
+                    elif 'esi' in splitStr[idz]:
                         modifySI(instrNodes[idx],instrNodes[idx])      
                     # elif dest reg is edi
-                    elif splitStr[idz] == "edi":
+                    elif 'edi' in splitStr[idz]:
                         modifyEDI(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    elif splitStr[idz] == "di":
+                    elif 'di' in splitStr[idz]:
                         modifyDI(instrNodes[idx],instrNodes[idx])
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
@@ -841,7 +957,7 @@ for idx, c in enumerate(instrEdges):
 
 
 add_nodes(datG)
-print(datG.source)
+#print(datG.source)
 
 with open(outFileName, 'w') as outFile:
     for line in datG.source:

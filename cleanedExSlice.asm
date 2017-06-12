@@ -75,7 +75,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be46
 mov ecx edx	 
 mov byte ptr [0xbffff46f] al	 
 mov eax ecx	 
@@ -87,7 +87,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be41
 mov ecx edx	 
 mov byte ptr [0xbffff46e] al	 
 mov eax ecx	 
@@ -99,7 +99,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be42
 mov ecx edx	 
 mov byte ptr [0xbffff46d] al	 
 mov eax ecx	 
@@ -111,7 +111,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be45
 mov ecx edx	 
 mov byte ptr [0xbffff46c] al	 
 mov eax ecx	 
@@ -123,7 +123,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be41
 mov ecx edx	 
 mov byte ptr [0xbffff46b] al	 
 cmp dword ptr [0xbfffefe4] 0x0	 
@@ -176,7 +176,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be46
 mov ecx edx	 
 mov byte ptr [0xbffff46f] al	 
 mov eax ecx	 
@@ -188,7 +188,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be41
 mov ecx edx	 
 mov byte ptr [0xbffff46e] al	 
 mov eax ecx	 
@@ -200,7 +200,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be42
 mov ecx edx	 
 mov byte ptr [0xbffff46d] al	 
 mov eax ecx	 
@@ -212,7 +212,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be45
 mov ecx edx	 
 mov byte ptr [0xbffff46c] al	 
 mov eax ecx	 
@@ -224,7 +224,7 @@ add eax eax
 sub ecx eax	 
 test edx edx	 
 mov edi 0xb7f8be40 
-movzx eax byte ptr [edi+ecx*1]	 
+movzx eax byte ptr [edi+ecx*1] b7f8be41
 mov ecx edx	 
 mov byte ptr [0xbffff46b] al	 
 cmp dword ptr [0xbfffefe4] 0x0	 

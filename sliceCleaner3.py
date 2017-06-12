@@ -6,6 +6,8 @@ bad_words = ['.section', '.globl', '_start:', 'jnb','jnbe','jnle','jp', 'jns', '
 sliceEnd = False
 sliceStarted = False
 
+extraMem = False
+
 with open('exslice.asm') as oldfile, open('cleanedExSlice.asm', 'w') as newfile:
 
     for line in oldfile:
@@ -13,9 +15,23 @@ with open('exslice.asm') as oldfile, open('cleanedExSlice.asm', 'w') as newfile:
 	    	if (line.startswith('/*slice begins*/')):
 	    		sliceStarted = True
 	    	if (not line.startswith('/* slice finishes')):
+	    		if '[e' in line and '#src_regmemreg' in line:
+	    			linePieces = line.split(' #src_regmemreg')
+	    			linePieces = linePieces[1].split(',')
+	    			linePieces = linePieces[1].split(':')
+	    			ultMemAddr = linePieces[0]
+	    			extraMem = True
+
 	    		prepline = re.sub("/\*(.|\n)*?\*/", '', line)
 	    		prepline = re.sub(",", '', prepline)
 	    		prepline = re.sub(' +',' ', prepline)
+
+	    		if extraMem == True:
+		    		prepline = re.sub('\n','', prepline)
+	    			prepline = prepline + "" + ultMemAddr + '\n'
+	    			extraMem = False
+	    			prepline = re.sub("\s\s+",' ', prepline)
+	    			#print(prepline)
 	    	else: 
 	    		sliceEnd = True
 	    		break
