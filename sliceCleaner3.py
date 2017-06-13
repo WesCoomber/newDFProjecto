@@ -28,7 +28,7 @@ with open('exslice.asm') as oldfile, open('cleanedExSlice.asm', 'w') as newfile:
 
 	    		if extraMem == True:
 		    		prepline = re.sub('\n','', prepline)
-	    			prepline = prepline + "" + ultMemAddr + '\n'
+	    			prepline = prepline + "[0x" + ultMemAddr + ']\n'
 	    			extraMem = False
 	    			prepline = re.sub("\s\s+",' ', prepline)
 	    			#print(prepline)

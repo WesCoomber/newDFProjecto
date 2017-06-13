@@ -49,9 +49,9 @@ print('Done! Instruction instrNodes List Size is : ')
 print(len(instrNodes))
 
 #print(instrNodes)
-print(instrEdges)
+#print(instrEdges)
 
-print(memAddressList)
+#print(memAddressList)
 
 
 print('Done! Instruction Edges List size is : ')
@@ -63,8 +63,9 @@ nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
 #example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
 print('Done! Dict (LineNumber-Instruction: Edges) is : ')
 #rint("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
+print(len(nodeEdgesDict))
 
-flagEnterKeys = 1
+flagEnterKeys = 0
 
 while (flagEnterKeys == 1):
     input_var = raw_input('Enter a key (b7ff5c05-cmp for the 1st instruction cmp in the slice): TYPE EXIT TO End.\n')
@@ -135,7 +136,7 @@ datG = graph()
 #This block of code is hacky way to get rid of duplicates in memAddressList
 #print(memAddressList)
 memAddressDict = {k: v for k, v in zip(memAddressList, memAddressList)}
-#memAddressList = list(memAddressDict.keys())
+memAddressList = list(memAddressDict.keys())
 #print(memAddressList)
 
 
@@ -373,7 +374,14 @@ for idx, c in enumerate(instrEdges):
                     if ((splitStr[idz])[:2]) == '[e':
                         #put into a dict to remove duplicates from the list of source registers
                         tempDict = {}
-                        print(tempNodeStr)
+                        #print(tempNodeStr)
+
+                        
+                        #add the extra mem source of taint
+                        if len(splitStr) >= 3:
+                            for i in range(4):
+                                datG.edge(memAddressDict[splitStr[2]], tempNodeStr, label=memAddressDict[splitStr[2]]+'(mem)'+str(i))
+                        
 
                         splitStr[idz] = splitStr[idz].replace('[', '')
                        
