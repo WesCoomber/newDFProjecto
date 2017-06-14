@@ -13,10 +13,25 @@ renderFileName = 'test-output/cleanedExGraphWes.gv'
 
 k = 1 
 y = 1 
-memAddressList = []
+memAddressNames = []
 nodeCount = -1
 instrEdges = []
 instrNodes = []
+instrNodesUniq = []
+
+endNodeStats = {
+    'shape': 'parallelogram',
+    'style': 'filled',
+    'fillcolor': 'greenyellow',
+    'penwidth': '4',
+}
+
+endEdgeStats = {
+    'shape': 'parallelogram',
+    'style': 'bold',
+    'color': 'green',
+    'penwidth': '5',
+}
 
 #get the instrNodes with their appropraite line numbers
 with open(fileName) as oldfile:
@@ -29,17 +44,20 @@ with open(fileName) as oldfile:
         #and only add the first word + its line number as a single node 
         if (splitLine[0] != 'call'):
             instrNodes.append('[' +str (k) + '] '+splitLine[0])
+            instrNodesUniq.append(splitLine[0])
             
 
             for idx, words in enumerate(splitLine):
                 if (idx != 0):
                     if ((splitLine[idx] != 'dword') and (splitLine[idx] != 'ptr') and (splitLine[idx] != 'byte')):
                         if('[0x' in splitLine[idx]):
-                            memAddressList.append(splitLine[idx])
+                            memAddressNames.append(splitLine[idx])
                         tempEdgeList.append(splitLine[idx])
         #else must be a system call so include both first two words + its line number
         else:
             instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
+            instrNodesUniq.append(splitLine[1])
+            tempEdgeList.append("eax")
         k = k + 1
         instrEdges.append(tempEdgeList) 
 
@@ -51,8 +69,10 @@ print(len(instrNodes))
 #print(instrNodes)
 #print(instrEdges)
 
-#print(memAddressList)
+#print(memAddressNames)
 
+uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
+#print(uniqueInstrDict.keys())
 
 print('Done! Instruction Edges List size is : ')
 print(len(instrEdges))
@@ -64,6 +84,7 @@ nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
 print('Done! Dict (LineNumber-Instruction: Edges) is : ')
 #rint("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
 print(len(nodeEdgesDict))
+#print((nodeEdgesDict))
 
 flagEnterKeys = 0
 
@@ -81,64 +102,26 @@ while (flagEnterKeys == 1):
 
 
 
-#register list from PIN
-#Make it more complete as we need
-#dictionary in python
-regMap = {
-        "(3,4)":"edi",
-        "(3,2)":"di",
-        "(4,4)":"esi",
-        "(4,2)":"si",
-        "(5,4)":"ebp",
-        "(5,2)":"bp",
-        "(6,4)":"esp",
-        "(6,2)":"sp",
-        "(7,4)":"ebx",
-        "(7,2)":"bx",
-        "(7,1)":"bl",
-        "(7,-1)":"bh",
-        "(8,4)":"edx",
-        "(8,2)":"dx",
-        "(8,1)":"dl",
-        "(8,-1)":"dh",
-        "(9,4)":"ecx",
-        "(9,2)":"cx",
-        "(9,1)":"cl",
-        "(9,-1)":"ch",
-        "(10,4)":"eax",
-        "(10,2)":"ax",
-        "(10,1)":"al",
-        "(10,-1)":"ah",
-        "(54,16)":"xmm0",
-        "(55,16)":"xmm1",
-        "(56,16)":"xmm2",
-        "(57,16)":"xmm3",
-        "(58,16)":"xmm4",
-        "(59,16)":"xmm5",
-        "(60,16)":"xmm6",
-        "(61,16)":"xmm7"
-}
-
-#sampleStr = '(9,1)'
-#print('regMap ' + sampleStr + ' ' + str(regMap[sampleStr]))
-
+FlagRegList = []
+FlagRegListNames = ['OF', 'SF', 'ZF', 'AF', 'CF', 'PF']
     
 ##New Graphviz-dot code here 
 graph = functools.partial(gv.Graph, format='svg')
-digraph = functools.partial(gv.Digraph, format='svg')
+digraph = functools.partial(gv.Digraph, format='svg', strict=False)
 
-datG = graph()
+datG = gv.Digraph(format='svg', strict=False)
 #list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
 #instrNodes
 #list of edges in the format ['eax, 0xfffff001', 'eax, 0x33']
 #nstrEdges
 
-#This block of code is hacky way to get rid of duplicates in memAddressList
-#print(memAddressList)
-memAddressDict = {k: v for k, v in zip(memAddressList, memAddressList)}
-memAddressList = list(memAddressDict.keys())
-#print(memAddressList)
+#This block of code is hacky way to get rid of duplicates in memAddressNames
+#print(memAddressNames)
+memAddressDict = {k: v for k, v in zip(memAddressNames, memAddressNames)}
+memAddressNames = list(memAddressDict.keys())
+#print(memAddressNames)
 
+#print(memAddressDict)
 
 def add_nodes(graph):
     for n in instrNodes:
@@ -179,6 +162,32 @@ ESP = ['ESP','ESP','ESP','ESP']
 EBP = ['EBP','EBP','EBP','EBP']
 ESI = ['ESI','ESI','ESI','ESI']
 EDI = ['EDI','EDI','EDI','EDI']
+
+#list of registers(and a list of their values inside) so we can easily include them in the EndofSliceNodes.
+regList = [
+EAX,
+ECX,
+EDI,
+EDX,
+EBX,
+ESP,
+EBP,
+ESI,
+EDI,
+]
+
+#list of regNames so we can easily include them in the EndofSliceNodes.
+regListNames = [
+'EAX',
+'ECX',
+'EDI',
+'EDX',
+'EBX',
+'ESP',
+'EBP',
+'ESI',
+'EDI',
+]
 
 
 
@@ -343,6 +352,7 @@ greyInst = [
 #no explicit sources/one destination output, and consumes flags to set the destination (which is the single explicit arg in slice)
 purpInst = [
  'setnz',
+ 'call', #call is for syscalls that dont actually consume flags, but this is a hack to get them working as modifying the EAX register with the syscall return value
 ]
 
 #pink instructions "NO dest reg or mem location modified as output edge" and two 2 source
@@ -373,7 +383,7 @@ for idx, c in enumerate(instrEdges):
                     #6-8 some extra "movzx eax byte ptr [edi+ecx*1]" handling, 
                     if ((splitStr[idz])[:2]) == '[e':
                         #put into a dict to remove duplicates from the list of source registers
-                        tempDict = {}
+                        dupChkDict = {}
                         #print(tempNodeStr)
 
                         
@@ -779,9 +789,20 @@ for idx, c in enumerate(instrEdges):
         # orange/gold/green Modify 1 one source
         if idz == 0:
                 if ((any(x in tempNodeStr for x in orangeInst)) or (any(x in tempNodeStr for x in goldInst)) or (any(x in tempNodeStr for x in greenInst)) or (any(x in tempNodeStr for x in purpInst))):
+                    #print(splitStr)
+                    if (any(x in tempNodeStr for x in purpInst)):
+                        #print tempNodeStr
+                        #print splitStr
+                        #print splitStr[idz]
+                        #print instrNodes[idx]
+                        #print "\n"
+                        pass
+
                     # if dest reg is eax
                     if 'eax' in splitStr[idz]:
+                        #print ("eax in purpInst Detected! \n")
                         modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
+                        #print (EAX)
                     elif 'ax' in splitStr[idz]:
                         modifyAX(instrNodes[idx],instrNodes[idx])
                     elif 'ah' in splitStr[idz]:
@@ -881,6 +902,7 @@ for idx, c in enumerate(instrEdges):
             statusFlags = [] 
             FlagRegList = [newestOF, newestSF, newestZF, newestAF, newestCF, newestPF]
 
+
         #if affects flags register then if [instr] and set status flags to a list of affected flags
         if idz == 0:
             #if instruction affects flags then put if statement for it under here
@@ -913,6 +935,8 @@ for idx, c in enumerate(instrEdges):
                 statusFlags = ['CF', 'OF', 'SF', 'ZF', 'AF', 'PF']
             if "cmp" in tempNodeStr:
                 statusFlags = ['CF', 'OF', 'SF', 'ZF', 'AF', 'PF']
+            if "test" in tempNodeStr:
+                statusFlags = ['SF', 'ZF',  'PF']
             if "inc" in tempNodeStr:
                 statusFlags = ['OF', 'SF', 'ZF', 'AF', 'PF']
             if "dec" in tempNodeStr:
@@ -923,6 +947,9 @@ for idx, c in enumerate(instrEdges):
                 statusFlags = ['CF', 'OF', 'SF', 'ZF', 'PF']            
             if "dec" in tempNodeStr:
                 statusFlags = ['AF', 'OF', 'SF', 'ZF', 'PF']
+            #does the flags that are undefined by an instruction means the taint is cleared?
+            #mul states "The OF and CF flags are set to 0 if the upper half of the result is 0; otherwise, they are set to 1. The SF, ZF, AF, and PF flags are undefined" 
+            #http://x86.renejeschke.de/html/file_module_x86_id_210.html
             if "mul" in tempNodeStr:
                 statusFlags = ['CF', 'OF', 'SF', 'ZF', 'AF', 'PF']
             if "div" in tempNodeStr:
@@ -966,10 +993,60 @@ for idx, c in enumerate(instrEdges):
 
 add_nodes(datG)
 #print(datG.source)
+#print('EAX: ' + str(EAX))
+
+
+
+#print(regList)
+#print(len(regList))
+
+def addNode(name):
+    datG.node(name, label = str(name), shape=endNodeStats['shape'],style=endNodeStats['style'], fillcolor = endNodeStats['fillcolor'], penwidth = endNodeStats['penwidth'])
+    return
+
+def addEdge(src, dst, name):
+    datG.edge(src, dst, label = str(name), shape=endEdgeStats['shape'],style=endEdgeStats['style'], color = endEdgeStats['color'], penwidth = endEdgeStats['penwidth'])
+    return    
+
+def add_endReg(name):
+    dupChkDict = {k: v for k, v in zip(name, name)}
+    #print(dupChkDict)
+    #print(dupChkDict.keys())
+    for idx, noder in enumerate(dupChkDict.keys()):
+        addNode(regListNames[i])
+        addEdge(noder, regListNames[i], 'EndofSliceValue')
+    return
+
+
+#go through all the registers and hook them up as end nodes which is the state of the system at the end of slice.
+for i in range(len(regList)):
+    add_endReg(regList[i])
+
+#go through all modified memory and hook each one as an end node which is the state of the system at the end of slice.
+for i in range(len(memAddressNames)):
+    #some of the mem addresses in the memAddressNames are not modified by the slice, they are only input sources of memory 
+    # this if statement makes sure we only add endpoint nodes/edges for modified memory addresses
+    if '[0x' not in ((memAddressDict[memAddressNames[i]])): 
+        #add_endNode(memAddressDict[memAddressNames[i]])
+        addNode(memAddressNames[i])
+        addEdge(memAddressDict[(memAddressNames[i])], memAddressNames[i], 'EndofSliceValue')
+        #datG.node(memAddressNames[i], label = str(memAddressNames[i]), shape='box', color = 'darkgreen', penwidth = edgePenWidth)
+        #datG.edge(memAddressDict[(memAddressNames[i])], memAddressNames[i], label='(' + 'EndofSliceValue' +')', color='Green', penwidth = edgePenWidth)
+        #print(memAddressDict[memAddressNames[i]])
+
+#go through all the flags in the x86 FLAG register and hook each 
+#one as an end node to the instruction that last modified it before the slice ended.
+for i in range(len(FlagRegList)):
+    addNode(FlagRegListNames[i])
+    addEdge(FlagRegList[i], FlagRegListNames[i], 'EndofSliceValue')
+
 
 with open(outFileName, 'w') as outFile:
     for line in datG.source:
         outFile.write(line)
+
+#for e in datG.get_edge_list():
+#    print e
 
 src = Source(datG)
 src.render(renderFileName, view=True)

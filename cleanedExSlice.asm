@@ -41,7 +41,8 @@ mov edx dword ptr [0xbfffef6c]
 mov dword ptr [0xb7fdde98] eax	 
 mov dword ptr [0xb7fdde9c] edx	 
 mov eax 20 
-int 0x80 
+int 0x80
+call fstat64_recheck  
 mov ecx eax	 
 mov dword ptr [0xb7e41728] ecx	 
 mov eax ecx	 
