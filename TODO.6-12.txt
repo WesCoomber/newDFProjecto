@@ -1,9 +1,0 @@
-TODO.6-12
-
-done ask xz about the reg mapping ( and below)
-done [SLICE] #b7e81b62 #lea eax, ptr [edx+edx*4]	    [SLICE_INFO] #src_regreg[8:1:4,8:1:4] #dst_reg_value 1521, src_reg_value 1521 
-
-done implement the extra mem address source for movzx instructions
-generate dict of unique nodes and verify that you handle all instructions.
-link syscalls to insturctions
-make the instructions end in ultimate outputs
