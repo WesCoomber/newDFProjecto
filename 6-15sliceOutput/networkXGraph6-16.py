@@ -1,15 +1,23 @@
-import re, sys
-import functools
-import graphviz as gv
-from graphviz import Source
+import re, os, sys, subprocess
+#import functools
+#import graphviz as gv
+#from graphviz import Source
+import networkx as nx
+#from networkx.drawing.nx_agraph import graphviz_layout
+from networkx.drawing.nx_pydot import write_dot
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import pydot
 
 
 fileName = 'cleanedExSlice.asm'
 #fileName = '200CleanedSlice.txt'
-outFileName = 'cleanedExGraph.txt'
+outFileName = 'cleanedExGraph.dot'
 #outFileName = '200UndirOutputGraph.txt'
-renderFileName = 'goodGraph.gv'
-#renderFileName = 'test-output/200UndirDataFlowSliceWes.gv'
+renderFileName = 'cleanedExGraph.pdf'
+
+#toggle this variable to enable interactive matlab graph
+yesInteractive = False
 
 k = 1 
 y = 1 
@@ -22,25 +30,13 @@ FlagRegDict = {}
 
 FlagRegList = []
 FlagRegListNames = ['OF', 'SF', 'ZF', 'AF', 'CF', 'PF']
-graph = functools.partial(gv.Graph, format='svg')
-digraph = functools.partial(gv.Digraph, format='svg', strict=False)
+#graph = functools.partial(gv.Graph, format='svg')
+#digraph = functools.partial(gv.Digraph, format='svg', strict=False)
 
-datG = gv.Digraph(format='svg', strict=True)
+JumpInstList = []
 
-flagEnterKeys = 1
 
-while (flagEnterKeys == 1):
-    input_var = raw_input('Do you want a strict (simplified) output of the graph? (y/n)\n')
-    
-    if (input_var == "y" or input_var == "yes"):
-        datG = gv.Digraph(format='svg', strict=True)
-        break
-    if ((input_var == "n") or (input_var == "no")):
-        datG = gv.Digraph(format='svg', strict=False)
-        break
-    else :
-        print("ERROR! Please enter in a (y)es or a (n)o.")  
-
+nGraph = nx.DiGraph()
 
 endNodeStats = {
     'shape': 'parallelogram',
@@ -70,166 +66,33 @@ jumpEdgeStats = {
     'penwidth': '5',
 }
 
-#jumpDict= {}
-
-#get the instrNodes with their appropraite line numbers
-with open(fileName) as oldfile:
-    for line in oldfile:
-        splitLine = line.split()
-
-        tempEdgeList = []
-        if not line.isspace():
-            #this 'j' block prints all the unique jumps in the slice.
-            #if ('j' in splitLine[0]):
-            #    jumpDict[splitLine[0]] = splitLine[0]
-            #   print(jumpDict.keys())
-
-            #if not a system call in the cleanedExSlice then must be a normal slice Instruction 
-            #and only add the first word + its line number as a single node 
-            if (splitLine[0] != 'call'):
-                instrNodes.append('[' +str (k) + '] '+splitLine[0])
-                instrNodesUniq.append(splitLine[0])
-                
-
-                for idx, words in enumerate(splitLine):
-                    if (idx != 0):
-                        if ((splitLine[idx] != 'dword') and (splitLine[idx] != 'ptr') and (splitLine[idx] != 'byte')):
-                            if('[0x' in splitLine[idx]):
-                                memAddressNames.append(splitLine[idx])
-                            tempEdgeList.append(splitLine[idx])
-            #else must be a system call so include both first two words + its line number
-            else:
-                instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
-                instrNodesUniq.append(splitLine[1])
-                tempEdgeList.append("eax")
-            instrEdges.append(tempEdgeList) 
-        k = k + 1
-        
-
-#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
-print('Done! Instruction instrNodes List Size is : ') 
-print(len(instrNodes))
-
-#print(instrNodes)
-#print(instrEdges)
-
-#print(memAddressNames)
-
-uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
-#print(uniqueInstrDict.keys())
-
-print('Done! Instruction Edges List size is : ')
-print(len(instrEdges))
-#print(instrEdges)
 
 
-nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
-#example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
-print('Done! Dict (Nodes: Edges) is : ')
-#rint("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
-print(len(nodeEdgesDict))
-#print((nodeEdgesDict))
-
-flagEnterKeys = 0
-
-while (flagEnterKeys == 1):
-    input_var = raw_input('Enter a key (b7ff5c05-cmp for the 1st instruction cmp in the slice): TYPE EXIT TO End.\n')
-    
-    if (input_var in nodeEdgesDict):
-        print("Operands for " + input_var + " are: " + str(nodeEdgesDict[input_var]) + ".\n")
-        break
-    if ((input_var == "exit") or (input_var == ",exit,")):
-        flagEnterKeys = 0;
-        break
-    else :
-        print("ERROR! Please enter in a valid key for the instrNodes, instrEdges dictionary.")  
-
-
-#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
-#instrNodes
-#list of edges in the format ['eax, 0xfffff001', 'eax, 0x33']
-#nstrEdges
-
-#This block of code is hacky way to get rid of duplicates in memAddressNames
-#print(memAddressNames)
-memAddressDict = {k: v for k, v in zip(memAddressNames, memAddressNames)}
-memAddressNames = list(memAddressDict.keys())
-#print(memAddressNames)
-
-#print(memAddressDict)
+def open_file(filename):
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
 def add_nodes(graph):
     for n in instrNodes:
-        graph.node(n, label = str(n) + '(' + str(nodeEdgesDict[n]) + ')')
+        graph.add_node(n, label = str(n) + '(' + str(nodeEdgesDict[n]) + ')')
     return graph
 
+def graph_draw(graph):
+    nx.draw(graph,
+         node_size = [16 * graph.degree(n) for n in graph],
+         node_color = [graph.depth[n] for n in graph],
+         with_labels = True)
 
-statusFlags = [] 
-datG.node('R', 'Root')
-datG.node('EAX', 'EAX')
-datG.node('ECX', 'ECX')
-datG.node('EDI', 'EDI')
-datG.node('EDX', 'EDX')
-datG.node('EBX', 'EBX')
-datG.node('ESP', 'ESP')
-datG.node('EBP', 'EBP')
-datG.node('ESI', 'ESI')
-datG.node('EDI', 'EDI')
-#datG.node('Out', 'Output')
-
-
-cmpFlags = []
-newestOF = 'R'
-newestSF = 'R'
-newestZF = 'R'
-newestAF = 'R'
-newestCF = 'R'
-newestPF = 'R'
-
-# default values 'R' means edge from root node in the 32-bit 4word registers
-#Accumulator    Counter     Data    Base    Stack Pointer   Stack Base Pointer  Source  Destination
-EAX = ['EAX','EAX','EAX','EAX']
-ECX = ['ECX','ECX','ECX','ECX']
-EDI = ['EDI','EDI','EDI','EDI']
-EDX = ['EDX','EDX','EDX','EDX']
-EBX = ['EBX','EBX','EBX','EBX']
-ESP = ['ESP','ESP','ESP','ESP']
-EBP = ['EBP','EBP','EBP','EBP']
-ESI = ['ESI','ESI','ESI','ESI']
-EDI = ['EDI','EDI','EDI','EDI']
-
-#list of registers(and a list of their values inside) so we can easily include them in the EndofSliceNodes.
-regList = [
-EAX,
-ECX,
-EDI,
-EDX,
-EBX,
-ESP,
-EBP,
-ESI,
-EDI,
-]
-
-#list of regNames so we can easily include them in the EndofSliceNodes.
-regListNames = [
-'EAX',
-'ECX',
-'EDI',
-'EDX',
-'EBX',
-'ESP',
-'EBP',
-'ESI',
-'EDI',
-]
 
 def addEndNode(name):
-    datG.node(name, label = str(name), shape=endNodeStats['shape'],style=endNodeStats['style'], fillcolor = endNodeStats['fillcolor'], penwidth = endNodeStats['penwidth'])
+    nGraph.add_node(name, label = str(name), shape=endNodeStats['shape'],style=endNodeStats['style'], fillcolor = endNodeStats['fillcolor'], penwidth = endNodeStats['penwidth'])
     return
 
 def addEndEdge(src, dst, name):
-    datG.edge(src, dst, label = str(name), shape=endEdgeStats['shape'],style=endEdgeStats['style'], color = endEdgeStats['color'], penwidth = endEdgeStats['penwidth'])
+    nGraph.add_edge(src, dst, label = str(name), shape=endEdgeStats['shape'],style=endEdgeStats['style'], color = endEdgeStats['color'], penwidth = endEdgeStats['penwidth'])
     return    
 
 def add_endReg(name):
@@ -242,11 +105,11 @@ def add_endReg(name):
     return
 
 def addJumpNode(name):
-    datG.node(name, label = str(name), shape=jumpNodeStats['shape'],style=jumpNodeStats['style'], fillcolor = jumpNodeStats['fillcolor'], penwidth = jumpNodeStats['penwidth'])
+    nGraph.add_node(name, label = str(name), shape=jumpNodeStats['shape'],style=jumpNodeStats['style'], fillcolor = jumpNodeStats['fillcolor'], penwidth = jumpNodeStats['penwidth'])
     return
 
 def addJumpEdge(src, dst, name):
-    datG.edge(src, dst, label = str(name), shape=jumpEdgeStats['shape'],style=jumpEdgeStats['style'], color = jumpEdgeStats['color'], penwidth = jumpEdgeStats['penwidth'])
+    nGraph.add_edge(src, dst, label = str(name), shape=jumpEdgeStats['shape'],style=jumpEdgeStats['style'], color = jumpEdgeStats['color'], penwidth = jumpEdgeStats['penwidth'])
     return    
 
 
@@ -337,6 +200,155 @@ def modifyEDI(firstWord, secondWord, thirdWord, fourthWord):
 
 def modifyDI(thirdWord, fourthWord):
     EDI[2:4] = [thirdWord, fourthWord]
+
+#jumpDict= {}
+#get the instrNodes with their appropraite line numbers
+with open(fileName) as oldfile:
+    for line in oldfile:
+        splitLine = line.split()
+
+        tempEdgeList = []
+        if not line.isspace():
+            #this 'j' block prints all the unique jumps in the slice.
+            #if ('j' in splitLine[0]):
+            #    jumpDict[splitLine[0]] = splitLine[0]
+            #   print(jumpDict.keys())
+
+            #if not a system call in the cleanedExSlice then must be a normal slice Instruction 
+            #and only add the first word + its line number as a single node 
+            if (splitLine[0] != 'call'):
+                instrNodes.append('[' +str (k) + '] '+splitLine[0])
+                instrNodesUniq.append(splitLine[0])
+                
+
+                for idx, words in enumerate(splitLine):
+                    if (idx != 0):
+                        if ((splitLine[idx] != 'dword') and (splitLine[idx] != 'ptr') and (splitLine[idx] != 'byte')):
+                            if('[0x' in splitLine[idx]):
+                                memAddressNames.append(splitLine[idx])
+                            tempEdgeList.append(splitLine[idx])
+            #else must be a system call so include both first two words + its line number
+            else:
+                instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
+                instrNodesUniq.append(splitLine[1])
+                tempEdgeList.append("eax")
+            instrEdges.append(tempEdgeList) 
+        k = k + 1
+        
+
+#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
+print('Done! Instruction instrNodes List Size is : ') 
+print(len(instrNodes))
+
+#print(instrNodes)
+#print(instrEdges)
+
+#print(memAddressNames)
+
+uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
+#print(uniqueInstrDict.keys())
+
+print('Done! Instruction Edges List size is : ')
+print(len(instrEdges))
+#print(instrEdges)
+
+
+nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
+#example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
+print('Done! Dict (Nodes: Edges) is : ')
+#rint("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
+print(len(nodeEdgesDict))
+#print((nodeEdgesDict))
+
+flagEnterKeys = 0
+
+while (flagEnterKeys == 1):
+    input_var = raw_input('Enter a key (b7ff5c05-cmp for the 1st instruction cmp in the slice): TYPE EXIT TO End.\n')
+    
+    if (input_var in nodeEdgesDict):
+        print("Operands for " + input_var + " are: " + str(nodeEdgesDict[input_var]) + ".\n")
+        break
+    if ((input_var == "exit") or (input_var == ",exit,")):
+        flagEnterKeys = 0;
+        break
+    else :
+        print("ERROR! Please enter in a valid key for the instrNodes, instrEdges dictionary.")  
+
+
+#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
+#instrNodes
+#list of edges in the format ['eax, 0xfffff001', 'eax, 0x33']
+#nstrEdges
+
+#This block of code is hacky way to get rid of duplicates in memAddressNames
+#print(memAddressNames)
+memAddressDict = {k: v for k, v in zip(memAddressNames, memAddressNames)}
+memAddressNames = list(memAddressDict.keys())
+#print(memAddressNames)
+
+#print(memAddressDict)
+
+
+
+statusFlags = [] 
+nGraph.add_node('ROOT')
+nGraph.add_node('EAX')
+nGraph.add_node('ECX')
+nGraph.add_node('EDI')
+nGraph.add_node('EDX')
+nGraph.add_node('EBX')
+nGraph.add_node('ESP')
+nGraph.add_node('EBP')
+nGraph.add_node('ESI')
+nGraph.add_node('EDI')
+#nGraph.add_node('Out', 'Output')
+
+
+cmpFlags = []
+newestOF = 'ROOT'
+newestSF = 'ROOT'
+newestZF = 'ROOT'
+newestAF = 'ROOT'
+newestCF = 'ROOT'
+newestPF = 'ROOT'
+
+# default values 'ROOT' means edge from root node in the 32-bit 4word registers
+#Accumulator    Counter     Data    Base    Stack Pointer   Stack Base Pointer  Source  Destination
+EAX = ['EAX','EAX','EAX','EAX']
+ECX = ['ECX','ECX','ECX','ECX']
+EDI = ['EDI','EDI','EDI','EDI']
+EDX = ['EDX','EDX','EDX','EDX']
+EBX = ['EBX','EBX','EBX','EBX']
+ESP = ['ESP','ESP','ESP','ESP']
+EBP = ['EBP','EBP','EBP','EBP']
+ESI = ['ESI','ESI','ESI','ESI']
+EDI = ['EDI','EDI','EDI','EDI']
+
+#list of registers(and a list of their values inside) so we can easily include them in the EndofSliceNodes.
+regList = [
+EAX,
+ECX,
+EDI,
+EDX,
+EBX,
+ESP,
+EBP,
+ESI,
+EDI,
+]
+
+#list of regNames so we can easily include them in the EndofSliceNodes.
+regListNames = [
+'EAX',
+'ECX',
+'EDI',
+'EDX',
+'EBX',
+'ESP',
+'EBP',
+'ESI',
+'EDI',
+]
 
 #orange instructions "dest reg or mem location modified as output edge" and one 1 source
 
@@ -450,7 +462,7 @@ for idx, c in enumerate(instrEdges):
                         #add the extra mem source of taint
                         if len(splitStr) >= 3:
                             for i in range(4):
-                                datG.edge(memAddressDict[splitStr[2]], tempNodeStr, label=memAddressDict[splitStr[2]]+'(mem)'+str(i))
+                                nGraph.add_edge(memAddressDict[splitStr[2]], tempNodeStr, label=memAddressDict[splitStr[2]]+'(mem)'+str(i))
                         
 
                         splitStr[idz] = splitStr[idz].replace('[', '')
@@ -473,279 +485,279 @@ for idx, c in enumerate(instrEdges):
                              #Eax edges 
                         if 'eax' in splitStr[idz]:
                             for ido, k in enumerate(EAX):
-                                datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
                         if 'ax' in splitStr[idz]:
                             for ido, k in enumerate(EAX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
                         if 'ah' in splitStr[idz]:
                             for ido, k in enumerate(EAX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
                         if 'al' in splitStr[idz]:
                             for ido, k in enumerate(EAX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(al)'+str(ido))
                         #Ecx edges 
                         if 'ecx' in splitStr[idz]:
                             for ido, k in enumerate(ECX):
-                                datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
                         if 'cx' in splitStr[idz]:
                             for ido, k in enumerate(ECX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
                         if 'ch' in splitStr[idz]:
                             for ido, k in enumerate(ECX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
                         if 'cl' in splitStr[idz]:
                             for ido, k in enumerate(ECX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
                         #
                         #Edx edges 
                         if 'edx' in splitStr[idz]:
                             for ido, k in enumerate(EDX):
-                                datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
                         if 'dx' in splitStr[idz]:
                             for ido, k in enumerate(EDX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
                         if 'dh' in splitStr[idz]:
                             for ido, k in enumerate(EDX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
                         if 'dl' in splitStr[idz]:
                             for ido, k in enumerate(EDX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
                         #
                         #Ebx edges 
                         if 'ebx' in splitStr[idz]:
                             for ido, k in enumerate(EBX):
-                                datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
                         if 'bx' in splitStr[idz]:
                             for ido, k in enumerate(EBX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
                         if 'bh' in splitStr[idz]:
                             for ido, k in enumerate(EBX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
                         if 'bl' in splitStr[idz]:
                             for ido, k in enumerate(EBX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
                         #esp edges
                         if 'esp' in splitStr[idz]:
                             for ido, k in enumerate(ESP):
-                                datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
                         if 'sp' in splitStr[idz]:
                             for ido, k in enumerate(ESP[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
                         #
                         #ebp edges
                         if 'ebp' in splitStr[idz]:
                             for ido, k in enumerate(EBP):
-                                datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
                         if 'bp' in splitStr[idz]:
                             for ido, k in enumerate(EBP[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
                         #
                         #esi edges
                         if 'esi' in splitStr[idz]:
                             for ido, k in enumerate(ESI):
-                                datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
                         if 'si' in splitStr[idz]:
                             for ido, k in enumerate(ESI[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(si)'+str(ido))
                         #
                         #
                         if 'edi' in splitStr[idz]:
                             for ido, k in enumerate(EDI):
-                                datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
                         if 'di' in splitStr[idz]:
                             for ido, k in enumerate(EDI[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(di)'+str(ido))
                         #
 
                     else:
                          #Eax edges 
                         if 'eax' in splitStr[idz]:
                             for ido, k in enumerate(EAX):
-                                datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
                         elif 'ax' in splitStr[idz]:
                             for ido, k in enumerate(EAX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
                         elif 'ah' in splitStr[idz]:
                             for ido, k in enumerate(EAX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
                         elif 'al' in splitStr[idz]:
                             for ido, k in enumerate(EAX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(al)'+str(ido))
                         #Ecx edges 
                         elif 'ecx' in splitStr[idz]:
                             for ido, k in enumerate(ECX):
-                                datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
                         elif 'cx' in splitStr[idz]:
                             for ido, k in enumerate(ECX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
                         elif 'ch' in splitStr[idz]:
                             for ido, k in enumerate(ECX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
                         elif 'cl' in splitStr[idz]:
                             for ido, k in enumerate(ECX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
                         #
                         #Edx edges 
                         elif 'edx' in splitStr[idz]:
                             for ido, k in enumerate(EDX):
-                                datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
                         elif 'dx' in splitStr[idz]:
                             for ido, k in enumerate(EDX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
                         elif 'dh' in splitStr[idz]:
                             for ido, k in enumerate(EDX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
                         elif 'dl' in splitStr[idz]:
                             for ido, k in enumerate(EDX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
                         #
                         #Ebx edges 
                         elif 'ebx' in splitStr[idz]:
                             for ido, k in enumerate(EBX):
-                                datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
                         elif 'bx' in splitStr[idz]:
                             for ido, k in enumerate(EBX[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
                         elif 'bh' in splitStr[idz]:
                             for ido, k in enumerate(EBX[2:3]):
-                                datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
                         elif 'bl' in splitStr[idz]:
                             for ido, k in enumerate(EBX[3:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
                         #esp edges
                         elif 'esp' in splitStr[idz]:
                             for ido, k in enumerate(ESP):
-                                datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
                         elif 'sp' in splitStr[idz]:
                             for ido, k in enumerate(ESP[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
                         #
                         #ebp edges
                         elif 'ebp' in splitStr[idz]:
                             for ido, k in enumerate(EBP):
-                                datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
                         elif 'bp' in splitStr[idz]:
                             for ido, k in enumerate(EBP[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
                         #
                         #esi edges
                         elif 'esi' in splitStr[idz]:
                             for ido, k in enumerate(ESI):
-                                datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
                         elif 'si' in splitStr[idz]:
                             for ido, k in enumerate(ESI[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(si)'+str(ido))
                         #
                         #
                         elif 'edi' in splitStr[idz]:
                             for ido, k in enumerate(EDI):
-                                datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
                         elif 'di' in splitStr[idz]:
                             for ido, k in enumerate(EDI[2:4]):
-                                datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(di)'+str(ido))
                         #
                         else:
                             if splitStr[idz] in (memAddressDict.keys()):
                                 for i in range(4):
-                                    datG.edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
+                                    nGraph.add_edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
                             else:
                                 pass
-                                #datG.edge('R', tempNodeStr, label= k +'(imm)'+str(1))   
+                                #nGraph.add_edge('ROOT', tempNodeStr, label= k +'(imm)'+str(1))   
         #THIS IS FOR BLUE INSTRUCTIONS, WHICH ARE INSTRUCTIONS THAT HAVE ONLY ONE EXPLICIT ARGUMENT IN THE SLICE
         #PUSH IS NOT RIGHT>?
         if idz == 0:
                if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in greyInst)):
                     if 'eax' in splitStr[idz]:
                         for ido, k in enumerate(EAX):
-                            datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
                     elif 'ax' in splitStr[idz]:
                         for ido, k in enumerate(EAX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
                     elif 'ah' in splitStr[idz]:
                         for ido, k in enumerate(EAX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
                     elif 'al' in splitStr[idz]:
                         for ido, k in enumerate(EAX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(al)'+str(ido))
                     #Ecx edges 
                     elif 'ecx' in splitStr[idz]:
                         for ido, k in enumerate(ECX):
-                            datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
                     elif 'cx' in splitStr[idz]:
                         for ido, k in enumerate(ECX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
                     elif 'ch' in splitStr[idz]:
                         for ido, k in enumerate(ECX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
                     elif 'cl' in splitStr[idz]:
                         for ido, k in enumerate(ECX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
                     #
                     #Edx edges 
                     elif 'edx' in splitStr[idz]:
                         for ido, k in enumerate(EDX):
-                            datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
                     elif 'dx' in splitStr[idz]:
                         for ido, k in enumerate(EDX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
                     elif 'dh' in splitStr[idz]:
                         for ido, k in enumerate(EDX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
                     elif 'dl' in splitStr[idz]:
                         for ido, k in enumerate(EDX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
                     #
                     #Ebx edges 
                     elif 'ebx' in splitStr[idz]:
                         for ido, k in enumerate(EBX):
-                            datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
                     elif 'bx' in splitStr[idz]:
                         for ido, k in enumerate(EBX[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
                     elif 'bh' in splitStr[idz]:
                         for ido, k in enumerate(EBX[2:3]):
-                            datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
                     elif 'bl' in splitStr[idz]:
                         for ido, k in enumerate(EBX[3:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
                     #esp edges
                     elif 'esp' in splitStr[idz]:
                         for ido, k in enumerate(ESP):
-                            datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
                     elif 'sp' in splitStr[idz]:
                         for ido, k in enumerate(ESP[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
                     #
                     #ebp edges
                     elif 'ebp' in splitStr[idz]:
                         for ido, k in enumerate(EBP):
-                            datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
                     elif 'bp' in splitStr[idz]:
                         for ido, k in enumerate(EBP[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
                     #
                     #esi edges
                     elif 'esi' in splitStr[idz]:
                         for ido, k in enumerate(ESI):
-                            datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
                     elif 'si' in splitStr[idz]:
                         for ido, k in enumerate(ESI[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(si)'+str(ido))
                     #
                     #
                     elif 'edi' in splitStr[idz]:
                         for ido, k in enumerate(EDI):
-                            datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
                     elif 'di' in splitStr[idz]:
                         for ido, k in enumerate(EDI[2:4]):
-                            datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
+                            nGraph.add_edge(k, tempNodeStr, label= k +'(di)'+str(ido))
                     #
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
                             for i in range(4):
-                                datG.edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
+                                nGraph.add_edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
                         else:
-                            datG.edge('R', tempNodeStr, label= k +'(imm)'+str(1))          
+                            nGraph.add_edge('ROOT', tempNodeStr, label= k +'(imm)'+str(1))          
 
 
         #input edges , cmp has for each argument passed in (a AND b) as 2 sources
@@ -755,96 +767,96 @@ for idx, c in enumerate(instrEdges):
             #Eax edges 
             if 'eax' in splitStr[idz]:
                 for ido, k in enumerate(EAX):
-                    datG.edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
             elif 'ax' in splitStr[idz]:
                 for ido, k in enumerate(EAX[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
             elif 'ah' in splitStr[idz]:
                 for ido, k in enumerate(EAX[2:3]):
-                    datG.edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(ah)'+str(ido))
             elif 'al' in splitStr[idz]:
                 for ido, k in enumerate(EAX[3:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(al)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(al)'+str(ido))
             #Ecx edges 
             elif 'ecx' in splitStr[idz]:
                 for ido, k in enumerate(ECX):
-                    datG.edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(ecx)'+str(ido))
             elif 'cx' in splitStr[idz]:
                 for ido, k in enumerate(ECX[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(cx)'+str(ido))
             elif 'ch' in splitStr[idz]:
                 for ido, k in enumerate(ECX[2:3]):
-                    datG.edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(ch)'+str(ido))
             elif 'cl' in splitStr[idz]:
                 for ido, k in enumerate(ECX[3:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
             #
             #Edx edges 
             elif 'edx' in splitStr[idz]:
                 for ido, k in enumerate(EDX):
-                    datG.edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(edx)'+str(ido))
             elif 'dx' in splitStr[idz]:
                 for ido, k in enumerate(EDX[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(dx)'+str(ido))
             elif 'dh' in splitStr[idz]:
                 for ido, k in enumerate(EDX[2:3]):
-                    datG.edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(dh)'+str(ido))
             elif 'dl' in splitStr[idz]:
                 for ido, k in enumerate(EDX[3:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
             #
             #Ebx edges 
             elif 'ebx' in splitStr[idz]:
                 for ido, k in enumerate(EBX):
-                    datG.edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(ebx)'+str(ido))
             elif 'bx' in splitStr[idz]:
                 for ido, k in enumerate(EBX[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(bx)'+str(ido))
             elif 'bh' in splitStr[idz]:
                 for ido, k in enumerate(EBX[2:3]):
-                    datG.edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(bh)'+str(ido))
             elif 'bl' in splitStr[idz]:
                 for ido, k in enumerate(EBX[3:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(bl)'+str(ido))
             #esp edges
             elif 'esp' in splitStr[idz]:
                 for ido, k in enumerate(ESP):
-                    datG.edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(esp)'+str(ido))
             elif 'sp' in splitStr[idz]:
                 for ido, k in enumerate(ESP[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
             #
             #ebp edges
             elif 'ebp' in splitStr[idz]:
                 for ido, k in enumerate(EBP):
-                    datG.edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
             elif 'bp' in splitStr[idz]:
                 for ido, k in enumerate(EBP[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
             #
             #esi edges
             elif 'esi' in splitStr[idz]:
                 for ido, k in enumerate(ESI):
-                    datG.edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(esi)'+str(ido))
             elif 'si' in splitStr[idz]:
                 for ido, k in enumerate(ESI[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(si)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(si)'+str(ido))
             #
             #
             elif 'edi' in splitStr[idz]:
                 for ido, k in enumerate(EDI):
-                    datG.edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
             elif 'di' in splitStr[idz]:
                 for ido, k in enumerate(EDI[2:4]):
-                    datG.edge(k, tempNodeStr, label= k +'(di)'+str(ido))
+                    nGraph.add_edge(k, tempNodeStr, label= k +'(di)'+str(ido))
             #
             else:
                 if splitStr[idz] in (memAddressDict.keys()):
                     for i in range(4):
-                        datG.edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
+                        nGraph.add_edge(memAddressDict[splitStr[idz]], tempNodeStr, label=memAddressDict[splitStr[idz]]+'(mem)'+str(i))
                 else:
                     pass
-                    #datG.edge('R', tempNodeStr, label=''+'(imm)'+str(2))    
+                    #nGraph.add_edge('ROOT', tempNodeStr, label=''+'(imm)'+str(2))    
 
         # orange/gold/green Modify 1 one source
         if idz == 0:
@@ -944,7 +956,7 @@ for idx, c in enumerate(instrEdges):
         #update the flags with newest most recent values
             for idy, c in enumerate(statusFlags):
                 #this was the output edge place holder
-                #datG.edge(tempNodeStr, 'Out', label=tempNodeStr + ',' + str(c))
+                #nGraph.add_edge(tempNodeStr, 'Out', label=tempNodeStr + ',' + str(c))
 
                 if c == "OF":
                     newestOF = tempNodeStr
@@ -1021,64 +1033,58 @@ for idx, c in enumerate(instrEdges):
             # if instr takes flag as input then put if statement for it under here
             #FlagRegList = [0newestOF, 1newestSF, 2newestZF, 3newestAF, 4newestCF, 5newestPF]
             if "sbb" in tempNodeStr:
-                datG.edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
-                #datG.edge(FlagRegDict['CF'], tempNodeStr, label=FlagRegDict['CF'] + '(' + str(nodeEdgesDict[FlagRegDict['CF']])+ ', CF' +')')
+                nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
+                #nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label=FlagRegDict['CF'] + '(' + str(nodeEdgesDict[FlagRegDict['CF']])+ ', CF' +')')
             if "setz" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
             if "setbe" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
-                datG.edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
-                #datG.edge(FlagRegDict['CF'], tempNodeStr, label=FlagRegDict['CF'] + '(' + str(nodeEdgesDict[FlagRegDict['CF']])+ ', CF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
+                nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
+                #nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label=FlagRegDict['CF'] + '(' + str(nodeEdgesDict[FlagRegDict['CF']])+ ', CF' +')')
             if "cmovz" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
             if "cmovb" in tempNodeStr:
-                datG.edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
+                nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
             if "cmovbe" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
-                datG.edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
+                nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
             #should cmovnbe be an AND? this might be a bug
             if "cmovnbe" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
-                datG.edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label=FlagRegDict['ZF'] + '(' + str(nodeEdgesDict[FlagRegDict['ZF']])+ ', ZF' +')')
+                nGraph.add_edge(FlagRegDict['CF'], tempNodeStr, label='(' + 'CF' +')')
             if "cmovnz" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
             if "cmovs" in tempNodeStr:
-                datG.edge(FlagRegDict['SF'], tempNodeStr, label='(' + 'SF' +')')
+                nGraph.add_edge(FlagRegDict['SF'], tempNodeStr, label='(' + 'SF' +')')
             if "setnz" in tempNodeStr:
-                datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
             #JUMPS consuming flags under here as end of slice values
             #
             #FlagRegList = [0newestOF, 1newestSF, 2newestZF, 3newestAF, 4newestCF, 5newestPF]
             if "jnz" in tempNodeStr:
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
                 addJumpEdge(FlagRegDict['ZF'], tempNodeStr, '(ZF)EndofSliceValue')
                 addJumpNode(tempNodeStr)
+                JumpInstList.append(tempNodeStr)
             if "js" in tempNodeStr:
-                #datG.edge(FlagRegDict['SF'], tempNodeStr, label='(' + 'SF' +')')
+                #nGraph.add_edge(FlagRegDict['SF'], tempNodeStr, label='(' + 'SF' +')')
                 addJumpEdge(FlagRegDict['SF'], tempNodeStr, '(SF)EndofSliceValue')
                 addJumpNode(tempNodeStr)
+                JumpInstList.append(tempNodeStr)
             if "jz" in tempNodeStr:
-                #datG.edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
+                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
                 addJumpEdge(FlagRegDict['ZF'], tempNodeStr, '(ZF)EndofSliceValue') 
                 addJumpNode(tempNodeStr)
+                JumpInstList.append(tempNodeStr)
 
 
 
-add_nodes(datG)
-#print(datG.source)
-#print('EAX: ' + str(EAX))
-
-
-
-#print(regList)
-#print(len(regList))
-
-
+add_nodes(nGraph)
 
 #go through all the registers and hook them up as end nodes which is the state of the system at the end of slice.
 for i in range(len(regList)):
@@ -1092,8 +1098,8 @@ for i in range(len(memAddressNames)):
         #add_endNode(memAddressDict[memAddressNames[i]])
         addEndNode(memAddressNames[i])
         addEndEdge(memAddressDict[(memAddressNames[i])], memAddressNames[i], 'EndofSliceValue')
-        #datG.node(memAddressNames[i], label = str(memAddressNames[i]), shape='box', color = 'darkgreen', penwidth = edgePenWidth)
-        #datG.edge(memAddressDict[(memAddressNames[i])], memAddressNames[i], label='(' + 'EndofSliceValue' +')', color='Green', penwidth = edgePenWidth)
+        #nGraph.add_node(memAddressNames[i], label = str(memAddressNames[i]), shape='box', color = 'darkgreen', penwidth = edgePenWidth)
+        #nGraph.add_edge(memAddressDict[(memAddressNames[i])], memAddressNames[i], label='(' + 'EndofSliceValue' +')', color='Green', penwidth = edgePenWidth)
         #print(memAddressDict[memAddressNames[i]])
 
 #go through all the flags in the x86 FLAG register and hook each 
@@ -1103,14 +1109,54 @@ for i in range(len(FlagRegList)):
     addEndEdge(FlagRegList[i], FlagRegListNames[i], 'EndofSliceValue')
 
 
-with open(outFileName, 'w') as outFile:
-    for line in datG.source:
-        outFile.write(line)
+if(yesInteractive == True):
+    pos = nx.drawing.nx_pydot.pydot_layout(nGraph)
+    nx.draw(nGraph,pos,with_labels=True)
+    plt.show()
 
-#for e in datG.get_edge_list():
-#    print e
+nx.drawing.nx_pydot.write_dot(nGraph, outFileName)
+#can remove this below incase you only care about the output .dot file
+dotGraph = nx.drawing.nx_pydot.to_pydot(nGraph, strict=True)
+dotGraph.write_pdf(renderFileName)
 
-src = Source(datG)
-src.render(renderFileName, view=True)
+open_file(renderFileName)
+
+def getAncestors(listOfNodes):
+    listOfAncestorSets = []
+    ancestorDict ={}
+    for nodeName in listOfNodes:
+        ancestorDict[nodeName] = nx.ancestors(nGraph, nodeName)
+        #listOfAncestorSets.append(nx.ancestors(nGraph, nodeName))
+    return ancestorDict
+
+
+#get ancestors of all the end nodes 
+endRegAncestors = getAncestors(regListNames)
+#print(endRegAncestors)
+print(len(endRegAncestors))
+print(endRegAncestors.keys())
+
+endMemAncestors = getAncestors(memAddressNames)
+#print(endMemAncestors)
+print(len(endMemAncestors))
+print(endMemAncestors.keys())
+
+endFlagAncestors = getAncestors(FlagRegListNames)
+#print(endFlagAncestors)
+print(len(endFlagAncestors))
+print(endFlagAncestors.keys())
+#print(endFlagAncestors['OF'])
+
+endJumpAncestors = getAncestors(JumpInstList)
+#print(endMemAncestors)
+print(len(endJumpAncestors))
+print(endJumpAncestors.keys())
+print(endJumpAncestors['[409] jnz'])
+
+#6-16 late afternoon work
+#next stop is to clean all nodes that arent an ancestor of a end point?
+
+
+
 
 print('done! check '+ outFileName)
