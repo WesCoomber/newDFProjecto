@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pydot
 
-
+#input filename equals fileName
 fileName = 'cleanedExSlice.asm'
-#fileName = '200CleanedSlice.txt'
+
 outFileName = 'cleanedExGraph.dot'
-#outFileName = '200UndirOutputGraph.txt'
+
 renderFileName = 'cleanedExGraph.pdf'
 
 #toggle this variable to enable interactive matlab graph
@@ -27,6 +27,7 @@ instrEdges = []
 instrNodes = []
 instrNodesUniq = []
 FlagRegDict = {}
+flagEnterKeys = 0
 
 FlagRegList = []
 FlagRegListNames = ['OF', 'SF', 'ZF', 'AF', 'CF', 'PF']
@@ -34,7 +35,6 @@ FlagRegListNames = ['OF', 'SF', 'ZF', 'AF', 'CF', 'PF']
 #digraph = functools.partial(gv.Digraph, format='svg', strict=False)
 
 JumpInstList = []
-
 
 nGraph = nx.DiGraph()
 
@@ -65,8 +65,132 @@ jumpEdgeStats = {
     'color': 'red',
     'penwidth': '5',
 }
+ 
+statusFlags = [] 
+nGraph.add_node('ROOT')
+nGraph.add_node('EAX')
+nGraph.add_node('ECX')
+nGraph.add_node('EDI')
+nGraph.add_node('EDX')
+nGraph.add_node('EBX')
+nGraph.add_node('ESP')
+nGraph.add_node('EBP')
+nGraph.add_node('ESI')
+nGraph.add_node('EDI')
 
+cmpFlags = []
+newestOF = 'ROOT'
+newestSF = 'ROOT'
+newestZF = 'ROOT'
+newestAF = 'ROOT'
+newestCF = 'ROOT'
+newestPF = 'ROOT'
 
+# default values 'ROOT' means edge from root node in the 32-bit 4word registers
+#Accumulator    Counter     Data    Base    Stack Pointer   Stack Base Pointer  Source  Destination
+EAX = ['EAX','EAX','EAX','EAX']
+ECX = ['ECX','ECX','ECX','ECX']
+EDI = ['EDI','EDI','EDI','EDI']
+EDX = ['EDX','EDX','EDX','EDX']
+EBX = ['EBX','EBX','EBX','EBX']
+ESP = ['ESP','ESP','ESP','ESP']
+EBP = ['EBP','EBP','EBP','EBP']
+ESI = ['ESI','ESI','ESI','ESI']
+EDI = ['EDI','EDI','EDI','EDI']
+
+#list of registers(and a list of their values inside) so we can easily include them in the EndofSliceNodes.
+regList = [
+EAX,
+ECX,
+EDI,
+EDX,
+EBX,
+ESP,
+EBP,
+ESI,
+EDI,
+]
+    
+#list of regNames so we can easily include them in the EndofSliceNodes.
+regListNames = []
+for register in regList:
+    regListNames.append(str(register[1]))
+
+#orange instructions "dest reg or mem location modified as output edge" and one 1 source
+orangeInst = [
+'cmovz',
+'inc',
+'neg',
+'rep',
+'setbe',
+'mov',
+'cmpxchg',
+'setz',
+'cmovb',
+'cmovbe',
+'cmovnbe',
+'cmovnz',
+'cmovs',
+'dec',
+'movsx',
+'movzx',
+'lea',
+]
+
+#gold instructions "dest reg or mem location modified as output edge" and two 2 sources
+goldInst = [
+'and',
+'imul',
+'sar',
+'xor',
+'sub',
+'add',
+'adc',
+'shr',
+'shl',
+'or',
+]
+
+#green instructions "dest reg or mem location modified as output edge" and three 3 sources
+greenInst = [
+'sbb',
+]
+
+# one source specified in slice AND one implicit source and no destination output
+blueInst = [
+#POP = and StackPOINTER is implicitly a source and STACKPOINTER regESP IS MODIFIED
+'pop',
+]
+
+# no source specified in slice AND one implicit source and one destination output
+tealInst = [
+#PUSH = and StackPOINTER is implicitly a source and STACKPOINTER regESP IS MODIFIED
+'push',
+]
+
+# one source specified in slice AND one implicit source and one implicit destination output 
+redInst = [
+#MUL the explicit soure is specified in slice, and AX or DX:AX or EDX:EAX is the implicit source
+'mul',
+]
+
+# one source specified in slice AND one implicit source and two implicit destination outputs 
+greyInst = [
+'div',
+]
+
+#no explicit sources/one destination output, and consumes flags to set the destination (which is the single explicit arg in slice)
+purpInst = [
+ 'setnz',
+ 'call', #call is for syscalls that dont actually consume flags, but this is a hack to get them working as modifying the EAX register with the syscall return value
+]
+
+#pink instructions "NO dest reg or mem location modified as output edge" and two 2 source
+pinkInst = [
+'test',
+'bt',
+'cmp'
+]
 
 def open_file(filename):
     if sys.platform == "win32":
@@ -86,7 +210,6 @@ def graph_draw(graph):
          node_color = [graph.depth[n] for n in graph],
          with_labels = True)
 
-
 def addEndNode(name):
     nGraph.add_node(name, label = str(name), shape=endNodeStats['shape'],style=endNodeStats['style'], fillcolor = endNodeStats['fillcolor'], penwidth = endNodeStats['penwidth'])
     return
@@ -97,8 +220,6 @@ def addEndEdge(src, dst, name):
 
 def add_endReg(name):
     dupChkDict = {k: v for k, v in zip(name, name)}
-    #print(dupChkDict)
-    #print(dupChkDict.keys())
     for idx, noder in enumerate(dupChkDict.keys()):
         addEndNode(regListNames[i])
         addEndEdge(noder, regListNames[i], 'EndofSliceValue')
@@ -111,8 +232,6 @@ def addJumpNode(name):
 def addJumpEdge(src, dst, name):
     nGraph.add_edge(src, dst, label = str(name), shape=jumpEdgeStats['shape'],style=jumpEdgeStats['style'], color = jumpEdgeStats['color'], penwidth = jumpEdgeStats['penwidth'])
     return    
-
-
 
 #modify Eax register and its 16 and 8 bit versions
 def modifyEAX(firstWord, secondWord, thirdWord, fourthWord):
@@ -127,11 +246,7 @@ def modifyAH(thirdWord):
 def modifyAL(fourthWord):
     EAX[3:4] = [fourthWord]    
 
-
-
-
 #modify ecx register and its 16 and 8 bit versions
-
 def modifyECX(firstWord, secondWord, thirdWord, fourthWord):
     ECX[0:4] = [firstWord, secondWord, thirdWord, fourthWord]
 
@@ -145,7 +260,6 @@ def modifyCL(fourthWord):
     ECX[3:4] = [fourthWord]    
 
 #modify edx register and its 16 and 8 bit versions
-
 def modifyEDX(firstWord, secondWord, thirdWord, fourthWord):
     EDX[0:4] = [firstWord, secondWord, thirdWord, fourthWord]
 
@@ -192,8 +306,6 @@ def modifyESI(firstWord, secondWord, thirdWord, fourthWord):
 def modifySI(thirdWord, fourthWord):
     ESI[2:4] = [thirdWord, fourthWord]
 
-
-
 #modify edi register and its 16bit versions
 def modifyEDI(firstWord, secondWord, thirdWord, fourthWord):
     EDI[0:4] = [firstWord, secondWord, thirdWord, fourthWord]
@@ -201,6 +313,14 @@ def modifyEDI(firstWord, secondWord, thirdWord, fourthWord):
 def modifyDI(thirdWord, fourthWord):
     EDI[2:4] = [thirdWord, fourthWord]
 
+def getAncestors(listOfNodes):
+    listOfAncestorSets = []
+    ancestorDict ={}
+    for nodeName in listOfNodes:
+        ancestorDict[nodeName] = nx.ancestors(nGraph, nodeName)
+        #listOfAncestorSets.append(nx.ancestors(nGraph, nodeName))
+    return ancestorDict
+    
 #jumpDict= {}
 #get the instrNodes with their appropraite line numbers
 with open(fileName) as oldfile:
@@ -235,33 +355,20 @@ with open(fileName) as oldfile:
             instrEdges.append(tempEdgeList) 
         k = k + 1
         
-
-#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
 print('Done! Instruction instrNodes List Size is : ') 
 print(len(instrNodes))
 
-#print(instrNodes)
-#print(instrEdges)
-
-#print(memAddressNames)
-
-uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
-#print(uniqueInstrDict.keys())
-
 print('Done! Instruction Edges List size is : ')
 print(len(instrEdges))
-#print(instrEdges)
 
-
+uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
 nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
 #example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
 print('Done! Dict (Nodes: Edges) is : ')
-#rint("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
+#print("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
 print(len(nodeEdgesDict))
-#print((nodeEdgesDict))
 
-flagEnterKeys = 0
-
+#this was to have user input manually check the nodeEdgesDict data structure 
 while (flagEnterKeys == 1):
     input_var = raw_input('Enter a key (b7ff5c05-cmp for the 1st instruction cmp in the slice): TYPE EXIT TO End.\n')
     
@@ -274,174 +381,12 @@ while (flagEnterKeys == 1):
     else :
         print("ERROR! Please enter in a valid key for the instrNodes, instrEdges dictionary.")  
 
-
-#list of instrNodes in the format ['[1] b7ff5c05-cmp', '[2] b7fe3d14-cmp']
-#instrNodes
-#list of edges in the format ['eax, 0xfffff001', 'eax, 0x33']
-#nstrEdges
-
 #This block of code is hacky way to get rid of duplicates in memAddressNames
-#print(memAddressNames)
 memAddressDict = {k: v for k, v in zip(memAddressNames, memAddressNames)}
 memAddressNames = list(memAddressDict.keys())
-#print(memAddressNames)
-
-#print(memAddressDict)
-
-
-
-statusFlags = [] 
-nGraph.add_node('ROOT')
-nGraph.add_node('EAX')
-nGraph.add_node('ECX')
-nGraph.add_node('EDI')
-nGraph.add_node('EDX')
-nGraph.add_node('EBX')
-nGraph.add_node('ESP')
-nGraph.add_node('EBP')
-nGraph.add_node('ESI')
-nGraph.add_node('EDI')
-#nGraph.add_node('Out', 'Output')
-
-
-cmpFlags = []
-newestOF = 'ROOT'
-newestSF = 'ROOT'
-newestZF = 'ROOT'
-newestAF = 'ROOT'
-newestCF = 'ROOT'
-newestPF = 'ROOT'
-
-# default values 'ROOT' means edge from root node in the 32-bit 4word registers
-#Accumulator    Counter     Data    Base    Stack Pointer   Stack Base Pointer  Source  Destination
-EAX = ['EAX','EAX','EAX','EAX']
-ECX = ['ECX','ECX','ECX','ECX']
-EDI = ['EDI','EDI','EDI','EDI']
-EDX = ['EDX','EDX','EDX','EDX']
-EBX = ['EBX','EBX','EBX','EBX']
-ESP = ['ESP','ESP','ESP','ESP']
-EBP = ['EBP','EBP','EBP','EBP']
-ESI = ['ESI','ESI','ESI','ESI']
-EDI = ['EDI','EDI','EDI','EDI']
-
-#list of registers(and a list of their values inside) so we can easily include them in the EndofSliceNodes.
-regList = [
-EAX,
-ECX,
-EDI,
-EDX,
-EBX,
-ESP,
-EBP,
-ESI,
-EDI,
-]
-
-#list of regNames so we can easily include them in the EndofSliceNodes.
-regListNames = [
-'EAX',
-'ECX',
-'EDI',
-'EDX',
-'EBX',
-'ESP',
-'EBP',
-'ESI',
-'EDI',
-]
-
-#orange instructions "dest reg or mem location modified as output edge" and one 1 source
-
-orangeInst = [
-'cmovz',
-'inc',
-'neg',
-'rep',
-'setbe',
-'mov',
-'cmpxchg',
-'setz',
-'cmovb',
-'cmovbe',
-'cmovnbe',
-'cmovnz',
-'cmovs',
-'dec',
-'movsx',
-'movzx',
-'lea',
-]
-
-
-
-
-#gold instructions "dest reg or mem location modified as output edge" and two 2 sources
-
-goldInst = [
-'and',
-'imul',
-'sar',
-'xor',
-'sub',
-'add',
-'adc',
-'shr',
-'shl',
-'or',
-
-]
-
-#green instructions "dest reg or mem location modified as output edge" and three 3 sources
-
-greenInst = [
-'sbb',
-]
-
-# one source specified in slice AND one implicit source and no destination output
-blueInst = [
-#POP = and StackPOINTER is implicitly a source and STACKPOINTER regESP IS MODIFIED
-'pop',
-#'push',
-]
-
-# no source specified in slice AND one implicit source and one destination output
-tealInst = [
-#PUSH = and StackPOINTER is implicitly a source and STACKPOINTER regESP IS MODIFIED
-'push',
-]
-
-# one source specified in slice AND one implicit source and one implicit destination output 
-redInst = [
-#MUL the explicit soure is specified in slice, and AX or DX:AX or EDX:EAX is the implicit source
-'mul',
-]
-
-# one source specified in slice AND one implicit source and two implicit destination outputs 
-greyInst = [
-'div',
-]
-
-#no explicit sources/one destination output, and consumes flags to set the destination (which is the single explicit arg in slice)
-purpInst = [
- 'setnz',
- 'call', #call is for syscalls that dont actually consume flags, but this is a hack to get them working as modifying the EAX register with the syscall return value
-]
-
-#pink instructions "NO dest reg or mem location modified as output edge" and two 2 source
-
-pinkInst = [
-'test',
-'bt',
-'cmp'
-]
-
-
-
-#print('EDGES: ' + str(instrEdges))
 
 pattern = re.compile("^\s+|\s*,\s*|\s+$")
 for idx, c in enumerate(instrEdges):
-
     for idz, b in enumerate(instrEdges[idx]):
         tempNodeStr = instrNodes[(idx)]
         splitStr = instrEdges[idx]
@@ -456,17 +401,13 @@ for idx, c in enumerate(instrEdges):
                     if ((splitStr[idz])[:2]) == '[e':
                         #put into a dict to remove duplicates from the list of source registers
                         dupChkDict = {}
-                        #print(tempNodeStr)
-
                         
                         #add the extra mem source of taint
                         if len(splitStr) >= 3:
                             for i in range(4):
                                 nGraph.add_edge(memAddressDict[splitStr[2]], tempNodeStr, label=memAddressDict[splitStr[2]]+'(mem)'+str(i))
-                        
 
                         splitStr[idz] = splitStr[idz].replace('[', '')
-                       
                         tempStrList = (splitStr[idz]).split('+')
                         workingList = tempStrList[1].split('*')
                         tempStrList[1] = workingList[0]
@@ -482,7 +423,7 @@ for idx, c in enumerate(instrEdges):
                             isMultipleRegs = True
 
                     if (isMultipleRegs == True):
-                             #Eax edges 
+                        #Eax edges 
                         if 'eax' in splitStr[idz]:
                             for ido, k in enumerate(EAX):
                                 nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
@@ -508,7 +449,6 @@ for idx, c in enumerate(instrEdges):
                         if 'cl' in splitStr[idz]:
                             for ido, k in enumerate(ECX[3:4]):
                                 nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
-                        #
                         #Edx edges 
                         if 'edx' in splitStr[idz]:
                             for ido, k in enumerate(EDX):
@@ -596,7 +536,6 @@ for idx, c in enumerate(instrEdges):
                         elif 'cl' in splitStr[idz]:
                             for ido, k in enumerate(ECX[3:4]):
                                 nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
-                        #
                         #Edx edges 
                         elif 'edx' in splitStr[idz]:
                             for ido, k in enumerate(EDX):
@@ -610,7 +549,6 @@ for idx, c in enumerate(instrEdges):
                         elif 'dl' in splitStr[idz]:
                             for ido, k in enumerate(EDX[3:4]):
                                 nGraph.add_edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
-                        #
                         #Ebx edges 
                         elif 'ebx' in splitStr[idz]:
                             for ido, k in enumerate(EBX):
@@ -759,10 +697,8 @@ for idx, c in enumerate(instrEdges):
                         else:
                             nGraph.add_edge('ROOT', tempNodeStr, label= k +'(imm)'+str(1))          
 
-
         #input edges , cmp has for each argument passed in (a AND b) as 2 sources
         if ((any(x in tempNodeStr for x in pinkInst)) or (any(x in tempNodeStr for x in goldInst))):
-
 
             #Eax edges 
             if 'eax' in splitStr[idz]:
@@ -790,7 +726,6 @@ for idx, c in enumerate(instrEdges):
             elif 'cl' in splitStr[idz]:
                 for ido, k in enumerate(ECX[3:4]):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(cl)'+str(ido))
-            #
             #Edx edges 
             elif 'edx' in splitStr[idz]:
                 for ido, k in enumerate(EDX):
@@ -804,7 +739,6 @@ for idx, c in enumerate(instrEdges):
             elif 'dl' in splitStr[idz]:
                 for ido, k in enumerate(EDX[3:4]):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(dl)'+str(ido))
-            #
             #Ebx edges 
             elif 'ebx' in splitStr[idz]:
                 for ido, k in enumerate(EBX):
@@ -825,7 +759,6 @@ for idx, c in enumerate(instrEdges):
             elif 'sp' in splitStr[idz]:
                 for ido, k in enumerate(ESP[2:4]):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(sp)'+str(ido))
-            #
             #ebp edges
             elif 'ebp' in splitStr[idz]:
                 for ido, k in enumerate(EBP):
@@ -833,7 +766,6 @@ for idx, c in enumerate(instrEdges):
             elif 'bp' in splitStr[idz]:
                 for ido, k in enumerate(EBP[2:4]):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
-            #
             #esi edges
             elif 'esi' in splitStr[idz]:
                 for ido, k in enumerate(ESI):
@@ -841,15 +773,14 @@ for idx, c in enumerate(instrEdges):
             elif 'si' in splitStr[idz]:
                 for ido, k in enumerate(ESI[2:4]):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(si)'+str(ido))
-            #
-            #
+            #edi edges
             elif 'edi' in splitStr[idz]:
                 for ido, k in enumerate(EDI):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(edi)'+str(ido))
             elif 'di' in splitStr[idz]:
                 for ido, k in enumerate(EDI[2:4]):
                     nGraph.add_edge(k, tempNodeStr, label= k +'(di)'+str(ido))
-            #
+            #else must be a (4byte?) memory address edge
             else:
                 if splitStr[idz] in (memAddressDict.keys()):
                     for i in range(4):
@@ -861,15 +792,6 @@ for idx, c in enumerate(instrEdges):
         # orange/gold/green Modify 1 one source
         if idz == 0:
                 if ((any(x in tempNodeStr for x in orangeInst)) or (any(x in tempNodeStr for x in goldInst)) or (any(x in tempNodeStr for x in greenInst)) or (any(x in tempNodeStr for x in purpInst))):
-                    #print(splitStr)
-                    if (any(x in tempNodeStr for x in purpInst)):
-                        #print tempNodeStr
-                        #print splitStr
-                        #print splitStr[idz]
-                        #print instrNodes[idx]
-                        #print "\n"
-                        pass
-
                     # if dest reg is eax
                     if 'eax' in splitStr[idz]:
                         #print ("eax in purpInst Detected! \n")
@@ -881,7 +803,6 @@ for idx, c in enumerate(instrEdges):
                         modifyAH(instrNodes[idx])
                     elif 'al' in splitStr[idz]:
                         modifyAL(instrNodes[idx])
-                    #    
                     # elif dest reg is ecx
                     elif 'ecx' in splitStr[idz]:
                         modifyECX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
@@ -891,7 +812,6 @@ for idx, c in enumerate(instrEdges):
                         modifyCH(instrNodes[idx])
                     elif 'cl' in splitStr[idz]:
                         modifyCL(instrNodes[idx])
-                    #    
                     # elif dest reg is edx
                     elif 'edx' in splitStr[idz]:
                         modifyEDX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
@@ -901,7 +821,6 @@ for idx, c in enumerate(instrEdges):
                         modifyDH(instrNodes[idx])
                     elif 'dl' in splitStr[idz]:
                         modifyDL(instrNodes[idx])
-                    #    
                     # elif dest reg is ebx
                     elif 'ebx' in splitStr[idz]:
                         modifyEBX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
@@ -911,7 +830,6 @@ for idx, c in enumerate(instrEdges):
                         modifyBH(instrNodes[idx])
                     elif 'bl' in splitStr[idz]:
                         modifyBL(instrNodes[idx])
-                    #
                     # elif dest reg is esp
                     elif 'esp' in splitStr[idz]:
                         modifyESP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
@@ -939,25 +857,20 @@ for idx, c in enumerate(instrEdges):
                if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in tealInst) or any(x in tempNodeStr for x in greyInst)):
                     if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in tealInst)):
                         modifyESP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
+                    #elif must be greyInst
                     elif (any(x in tempNodeStr for x in greyInst)):
                         modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                         modifyEDX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
-                    #if must be redInst
+                    #elif must be redInst
                     elif (any(x in tempNodeStr for x in redInst)):
                         modifyEAX(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
                             memAddressDict[splitStr[idz]] = instrNodes[idx]
-
-       
         if idz == 1:     
         #iterate through the flags outputted (affected) by the instruction and do both:
-        #add an edge from the instruction to generic 'OutputNode'
         #update the flags with newest most recent values
             for idy, c in enumerate(statusFlags):
-                #this was the output edge place holder
-                #nGraph.add_edge(tempNodeStr, 'Out', label=tempNodeStr + ',' + str(c))
-
                 if c == "OF":
                     newestOF = tempNodeStr
                 if c == "SF":
@@ -971,12 +884,9 @@ for idx, c in enumerate(instrEdges):
                 if c == "PF":
                     newestPF = tempNodeStr
 
-            allFlagRegs = ['CF', 'OF', 'SF', 'ZF', 'AF', 'PF']    
             statusFlags = [] 
             FlagRegList = [newestOF, newestSF, newestZF, newestAF, newestCF, newestPF]
-
-            FlagRegDict = {k: v for k, v in zip(allFlagRegs, FlagRegList)}
-
+            FlagRegDict = {k: v for k, v in zip(FlagRegListNames, FlagRegList)}
 
         #if affects flags register then if [instr] and set status flags to a list of affected flags
         if idz == 0:
@@ -1082,8 +992,6 @@ for idx, c in enumerate(instrEdges):
                 addJumpNode(tempNodeStr)
                 JumpInstList.append(tempNodeStr)
 
-
-
 add_nodes(nGraph)
 
 #go through all the registers and hook them up as end nodes which is the state of the system at the end of slice.
@@ -1095,19 +1003,14 @@ for i in range(len(memAddressNames)):
     #some of the mem addresses in the memAddressNames are not modified by the slice, they are only input sources of memory 
     # this if statement makes sure we only add endpoint nodes/edges for modified memory addresses
     if '[0x' not in ((memAddressDict[memAddressNames[i]])): 
-        #add_endNode(memAddressDict[memAddressNames[i]])
         addEndNode(memAddressNames[i])
         addEndEdge(memAddressDict[(memAddressNames[i])], memAddressNames[i], 'EndofSliceValue')
-        #nGraph.add_node(memAddressNames[i], label = str(memAddressNames[i]), shape='box', color = 'darkgreen', penwidth = edgePenWidth)
-        #nGraph.add_edge(memAddressDict[(memAddressNames[i])], memAddressNames[i], label='(' + 'EndofSliceValue' +')', color='Green', penwidth = edgePenWidth)
-        #print(memAddressDict[memAddressNames[i]])
 
 #go through all the flags in the x86 FLAG register and hook each 
 #one as an end node to the instruction that last modified it before the slice ended.
 for i in range(len(FlagRegList)):
     addEndNode(FlagRegListNames[i])
     addEndEdge(FlagRegList[i], FlagRegListNames[i], 'EndofSliceValue')
-
 
 if(yesInteractive == True):
     pos = nx.drawing.nx_pydot.pydot_layout(nGraph)
@@ -1120,15 +1023,6 @@ dotGraph = nx.drawing.nx_pydot.to_pydot(nGraph, strict=True)
 dotGraph.write_pdf(renderFileName)
 
 open_file(renderFileName)
-
-def getAncestors(listOfNodes):
-    listOfAncestorSets = []
-    ancestorDict ={}
-    for nodeName in listOfNodes:
-        ancestorDict[nodeName] = nx.ancestors(nGraph, nodeName)
-        #listOfAncestorSets.append(nx.ancestors(nGraph, nodeName))
-    return ancestorDict
-
 
 #get ancestors of all the end nodes 
 endRegAncestors = getAncestors(regListNames)
@@ -1151,12 +1045,17 @@ endJumpAncestors = getAncestors(JumpInstList)
 #print(endMemAncestors)
 print(len(endJumpAncestors))
 print(endJumpAncestors.keys())
-print(endJumpAncestors['[409] jnz'])
+exampleEndNode = '[409] jnz'
+print('\n')
+print('ancestors of ' + exampleEndNode + str(endJumpAncestors[exampleEndNode]))
+print('\n')
 
 #6-16 late afternoon work
 #next stop is to clean all nodes that arent an ancestor of a end point?
+allAncestors = endRegAncestors.union(endMemAncestors)
+allAncestors = allAncestors.union(endFlagAncestors)
+allAncestors = allAncestors.union(endJumpAncestors)
+print(len(allAncestors))
+print(allAncestors)
 
-
-
-
-print('done! check '+ outFileName)
+print('\ndone! check '+ outFileName)
