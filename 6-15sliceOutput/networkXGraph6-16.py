@@ -1052,7 +1052,8 @@ print('\n')
 
 #6-16 late afternoon work
 #next stop is to clean all nodes that arent an ancestor of a end point?
-allAncestors = endRegAncestors.union(endMemAncestors)
+#6-19 also add more jumps to slice processing (we only handle the 3 in the getpid example right now)
+allAncestorgs = endRegAncestors.union(endMemAncestors)
 allAncestors = allAncestors.union(endFlagAncestors)
 allAncestors = allAncestors.union(endJumpAncestors)
 print(len(allAncestors))

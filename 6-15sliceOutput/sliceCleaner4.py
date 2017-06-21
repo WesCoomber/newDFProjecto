@@ -32,11 +32,12 @@ with open('exslice.asm') as oldfile, open('cleanedExSlice.asm', 'w') as newfile:
 	    			prepline = prepline + "[0x" + ultMemAddr + ']\n'
 	    			extraMem = False
 	    			prepline = re.sub("\s\s+",' ', prepline)
-	    			#print(prepline)
+	    	
 	    	else: 
 	    		sliceEnd = True
 	    		break
 	    	#if not prepline.isspace():
+	    	if()
     		if (sliceStarted == True):
         		newfile.write(prepline)
         	else:
