@@ -24,6 +24,10 @@ call open_recheck    /* [ORIGINAL_SLICE] 00000000  [SLICE_INFO]*/
 call stat64_recheck    /* [ORIGINAL_SLICE] 00000000  [SLICE_INFO]*/
 call open_recheck    /* [ORIGINAL_SLICE] 00000000  [SLICE_INFO]*/
 call read_recheck    /* [ORIGINAL_SLICE] 00000000  [SLICE_INFO]*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffef68 bfffef70*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffef50 bfffef54*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffef60 bfffef64*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffef58 bfffef5c*/
 call fstat64_recheck    /* [ORIGINAL_SLICE] 00000000  [SLICE_INFO]*/
 /*Eliminated [SLICE_ADDRESSING] immediate_address $addr(0xbfffef68)  //come with b7fe4864 (move upwards)*/
 mov edi, dword ptr [0xbfffef68]	       /* [ORIGINAL_SLICE] b7fe4864  [SLICE_INFO] #src_memregreg_mov[5:0:4,bfffef68:1:4,0:0:0] #base_reg_value 3221221256, mem_value 11035190, index_reg_value 0*/
@@ -82,6 +86,10 @@ mov  dword ptr [0xbffff49c], ecx	       /* [ORIGINAL_SLICE] b7ff2971  [SLICE_INF
 mov ecx, dword ptr [0xbffff49c]	       /* [ORIGINAL_SLICE] b7ff2981  [SLICE_INFO] #src_memregreg_mov[6:0:4,bffff49c:1:4,0:0:0] #base_reg_value 3221222556, mem_value 15216, index_reg_value 0*/
 /*Eliminated [SLICE_ADDRESSING] immediate_address $addr(0xbffff4a0)  //come with b7ff2987 (move upwards)*/
 mov eax, dword ptr [0xbffff4a0]	       /* [ORIGINAL_SLICE] b7ff2987  [SLICE_INFO] #src_memregreg_mov[6:0:4,bffff4a0:1:4,0:0:0] #base_reg_value 3221222556, mem_value 15216, index_reg_value 0*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffeec8 bfffeed0*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffeeb0 bfffeeb4*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffeec0 bfffeec4*/
+/*Eliminated [SLICE_TAINT] fstat64 bfffeeb8 bfffeebc*/
 call fstat64_recheck    /* [ORIGINAL_SLICE] 00000000  [SLICE_INFO]*/
 /*Eliminated [SLICE_ADDRESSING] immediate_address $addr(0xbffff4b4)  //come with b7e861b6 (move upwards)*/
 mov eax, dword ptr [0xbffff4b4]	       /* [ORIGINAL_SLICE] b7e861b6  [SLICE_INFO] #src_memregreg_mov[10:0:4,bffff4b4:1:4,0:0:0] #base_reg_value 3221222580, mem_value 15216, index_reg_value 0*/
