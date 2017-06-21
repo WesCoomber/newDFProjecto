@@ -1,0 +1,1 @@
+['lea', 'shr', 'access_recheck', 'sub', 'mul', 'int', 'close_recheck', 'mov', 'or', 'test', 'add', 'open_recheck', 'stat64_recheck', 'neg', 'read_recheck', 'xor', 'fstat64_recheck', 'movzx', 'cmp']

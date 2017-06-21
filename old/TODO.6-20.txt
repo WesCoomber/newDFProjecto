@@ -1,0 +1,13 @@
+TODO.6-20
+
+done ask xz about the reg mapping ( and below)
+done [SLICE] #b7e81b62 #lea eax, ptr [edx+edx*4]	    [SLICE_INFO] #src_regreg[8:1:4,8:1:4] #dst_reg_value 1521, src_reg_value 1521 
+
+done implement the extra mem address source for movzx instructions
+done generate dict of unique nodes and verify that you handle all instructions.
+done make the instructions end in ultimate outputs
+link syscalls to instructions
+make the cmp instructions linked to jumps that consume them.
+generate new slice and verify works with dfGraph tool
+
+ssh into omniplay VM and make -j4 the dift/ and test/ folders.
