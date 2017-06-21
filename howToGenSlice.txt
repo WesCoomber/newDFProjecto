@@ -1,2 +1,0 @@
-wcoomber@wcoomber-virtual-machine:~test/$ ./gen_ckpt.py 24580 99999 -taint_syscall 30
-wcoomber@wcoomber-virtual-machine:~$ emacs /tmp/exslice.asm
