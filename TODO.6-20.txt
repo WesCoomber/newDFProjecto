@@ -10,6 +10,4 @@ link syscalls to instructions
 make the cmp instructions linked to jumps that consume them.
 generate new slice and verify works with dfGraph tool
 
-6-20
-sys calls taint a range of memory (it is specified in new format of the slice)
 ssh into omniplay VM and make -j4 the dift/ and test/ folders.

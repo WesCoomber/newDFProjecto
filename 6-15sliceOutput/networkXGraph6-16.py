@@ -7,7 +7,8 @@ import networkx as nx
 from networkx.drawing.nx_pydot import write_dot
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import pydot
+#might have to change this back to 'import pydot' when on mac
+import pydotplus
 
 #input filename equals fileName
 fileName = 'cleanedExSlice.asm'
@@ -1012,6 +1013,46 @@ for i in range(len(FlagRegList)):
     addEndNode(FlagRegListNames[i])
     addEndEdge(FlagRegList[i], FlagRegListNames[i], 'EndofSliceValue')
 
+#get ancestors of all the end nodes 
+endRegAncestors = getAncestors(regListNames)
+endMemAncestors = getAncestors(memAddressNames)
+endFlagAncestors = getAncestors(FlagRegListNames)
+endJumpAncestors = getAncestors(JumpInstList)
+
+#go through all the sets of ancestors from regs/mem/flags/jumps and add them to a single set called allAncestors
+allAncestors = set()
+for key in endRegAncestors.keys():
+    allAncestors.update(endRegAncestors[key])
+for key in endMemAncestors.keys():
+    allAncestors.update(endMemAncestors[key])
+for key in endFlagAncestors.keys():
+    allAncestors.update(endFlagAncestors[key])
+for key in endJumpAncestors.keys():
+    allAncestors.update(endJumpAncestors[key])
+allAncestors.update(endRegAncestors.keys())
+allAncestors.update(endMemAncestors.keys())
+allAncestors.update(endFlagAncestors.keys())
+allAncestors.update(endJumpAncestors.keys())
+
+#get a set of all total nodes from the graph and get the symmetric difference between allNodes and the allAncestors set. This resultant
+#difference is the set of nodes that can be safely removed from the graph 
+nodeSet = set(nGraph.nodes())
+nodeCount = len(nodeSet)
+toBeCleaned = allAncestors.symmetric_difference(nodeSet)
+removedCount = len(toBeCleaned)
+
+percentCleaned = removedCount / nodeCount
+
+print('percentRemoved(' + str(removedCount) + '/' + str(nodeCount) + '): ' +  str(percentCleaned))
+
+removedGraph= nGraph.subgraph(toBeCleaned)
+nGraph.remove_nodes_from(toBeCleaned)
+nx.drawing.nx_pydot.write_dot(removedGraph, 'removed'+outFileName)
+
+#6-16 late afternoon work
+#next stop is to clean all nodes that arent an ancestor of a end point?
+#6-19 also add more jumps to slice processing (we only handle the 3 in the getpid example right now)
+
 if(yesInteractive == True):
     pos = nx.drawing.nx_pydot.pydot_layout(nGraph)
     nx.draw(nGraph,pos,with_labels=True)
@@ -1023,40 +1064,12 @@ dotGraph = nx.drawing.nx_pydot.to_pydot(nGraph, strict=True)
 dotGraph.write_pdf(renderFileName)
 
 open_file(renderFileName)
+#open the removed Nodes sub Graph
+dotGraph = nx.drawing.nx_pydot.to_pydot(removedGraph, strict=True)
+dotGraph.write_pdf('removed'+renderFileName)
 
-#get ancestors of all the end nodes 
-endRegAncestors = getAncestors(regListNames)
-#print(endRegAncestors)
-print(len(endRegAncestors))
-print(endRegAncestors.keys())
+open_file('removed'+renderFileName)
 
-endMemAncestors = getAncestors(memAddressNames)
-#print(endMemAncestors)
-print(len(endMemAncestors))
-print(endMemAncestors.keys())
 
-endFlagAncestors = getAncestors(FlagRegListNames)
-#print(endFlagAncestors)
-print(len(endFlagAncestors))
-print(endFlagAncestors.keys())
-#print(endFlagAncestors['OF'])
-
-endJumpAncestors = getAncestors(JumpInstList)
-#print(endMemAncestors)
-print(len(endJumpAncestors))
-print(endJumpAncestors.keys())
-exampleEndNode = '[409] jnz'
-print('\n')
-print('ancestors of ' + exampleEndNode + str(endJumpAncestors[exampleEndNode]))
-print('\n')
-
-#6-16 late afternoon work
-#next stop is to clean all nodes that arent an ancestor of a end point?
-#6-19 also add more jumps to slice processing (we only handle the 3 in the getpid example right now)
-allAncestorgs = endRegAncestors.union(endMemAncestors)
-allAncestors = allAncestors.union(endFlagAncestors)
-allAncestors = allAncestors.union(endJumpAncestors)
-print(len(allAncestors))
-print(allAncestors)
-
+print('\ndone! check '+  'removed'+ outFileName)
 print('\ndone! check '+ outFileName)
