@@ -24,9 +24,26 @@ with open('exslice.asm') as oldfile, open(outFile, 'w') as newfile:
                     ultMemAddr = linePieces[0]
                     extraMem = True
 
-                prepline = re.sub("/\*(.|\n)*?\*/", '', line)
-                prepline = re.sub(",", '', prepline)
-                prepline = re.sub(' +',' ', prepline)
+                if (line.startswith('/*Eliminated [SLICE_TAINT]')):
+                    prepline = re.sub('\n','', line)
+                    tempPieces = line.split('[SLICE_TAINT]')
+                    tempPieces = tempPieces[1].split(' ')
+                    tempPieces[3] = re.sub("\*.*$", '', tempPieces[3])
+                    tempPieces[3] = tempPieces[3].rstrip()
+                    tempPieces[1] = 'MRange,' + tempPieces[1]
+                    finalStr = ''
+                    for idx, piece in enumerate(tempPieces):
+                        if idx > 1:
+                            piece = '[0x' + piece + ']'
+                        finalStr = finalStr + ' ' + piece;
+                    finalStr = finalStr.lstrip()
+                    finalStr = finalStr + '\n'
+                    prepline = finalStr
+
+                if (not line.startswith('/*Eliminated [SLICE_TAINT]')):
+                    prepline = re.sub("/\*(.|\n)*?\*/", '', line)
+                    prepline = re.sub(",", '', prepline)
+                    prepline = re.sub(' +',' ', prepline)
 
                 if extraMem == True:
                     prepline = re.sub('\n','', prepline)

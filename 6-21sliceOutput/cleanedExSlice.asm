@@ -24,6 +24,10 @@ call open_recheck
 call stat64_recheck 
 call open_recheck 
 call read_recheck 
+MRange,fstat64 [0xbfffef68] [0xbfffef70]
+MRange,fstat64 [0xbfffef50] [0xbfffef54]
+MRange,fstat64 [0xbfffef60] [0xbfffef64]
+MRange,fstat64 [0xbfffef58] [0xbfffef5c]
 call fstat64_recheck 
 
 mov edi dword ptr [0xbfffef68]	 
@@ -82,6 +86,10 @@ mov dword ptr [0xbffff49c] ecx
 mov ecx dword ptr [0xbffff49c]	 
 
 mov eax dword ptr [0xbffff4a0]	 
+MRange,fstat64 [0xbfffeec8] [0xbfffeed0]
+MRange,fstat64 [0xbfffeeb0] [0xbfffeeb4]
+MRange,fstat64 [0xbfffeec0] [0xbfffeec4]
+MRange,fstat64 [0xbfffeeb8] [0xbfffeebc]
 call fstat64_recheck 
 
 mov eax dword ptr [0xbffff4b4]	 

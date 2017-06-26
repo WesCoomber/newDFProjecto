@@ -334,10 +334,11 @@ with open(fileName) as oldfile:
             #if ('j' in splitLine[0]):
             #    jumpDict[splitLine[0]] = splitLine[0]
             #   print(jumpDict.keys())
+            addEdge = True
 
             #if not a system call in the cleanedExSlice then must be a normal slice Instruction 
             #and only add the first word + its line number as a single node 
-            if (splitLine[0] != 'call'):
+            if (splitLine[0] != 'call') and ('MRange' not in splitLine[0]):
                 instrNodes.append('[' +str (k) + '] '+splitLine[0])
                 instrNodesUniq.append(splitLine[0])
                 
@@ -348,12 +349,44 @@ with open(fileName) as oldfile:
                             if('[0x' in splitLine[idx]):
                                 memAddressNames.append(splitLine[idx])
                             tempEdgeList.append(splitLine[idx])
-            #else must be a system call so include both first two words + its line number
+
+                        
+            #else must be a system call so include both first two words + its line number (syscall return vals always set register eax)
+            #6-26 else could also be a sys call, mem range taint
             else:
-                instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
-                instrNodesUniq.append(splitLine[1])
-                tempEdgeList.append("eax")
-            instrEdges.append(tempEdgeList) 
+                if ('MRange' in splitLine[0]):
+
+                    tailMem = splitLine[2]
+                    startMem = splitLine [1]
+
+
+                    tailMem = tailMem[1:(len(tailMem)-1)]
+                    startMem = startMem[1:(len(startMem)-1)]
+                    tailMem = int(tailMem, 0)
+                    startMem = int(startMem, 0)
+                    tntMemRange = tailMem - startMem
+
+                    tntMemList = []
+                    for i in range (tntMemRange):
+                        startMem = startMem +1
+                        tntMemList.append('[' + str(hex(startMem)) + ']')
+                    for tntMem in tntMemList:
+                        tempEdgeList.append(tntMem)
+                        #need to handle instructions using memory in these recorded ranges
+                        #6-26 wes
+                    instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + str(len(tntMemList)))
+                    
+                      
+
+
+                else:
+                    instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
+                    instrNodesUniq.append(splitLine[1])
+                    tempEdgeList.append("eax")
+            if(addEdge is True):
+                instrEdges.append(tempEdgeList)
+            else:
+                addEdge = True
         k = k + 1
         
 print('Done! Instruction instrNodes List Size is : ') 
@@ -1057,7 +1090,7 @@ if(yesInteractive == True):
     pos = nx.drawing.nx_pydot.pydot_layout(nGraph)
     nx.draw(nGraph,pos,with_labels=True)
     plt.show()
-
+    
 nx.drawing.nx_pydot.write_dot(nGraph, outFileName)
 #can remove this below incase you only care about the output .dot file
 dotGraph = nx.drawing.nx_pydot.to_pydot(nGraph, strict=True)
