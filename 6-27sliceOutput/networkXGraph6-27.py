@@ -36,7 +36,71 @@ FlagRegListNames = ['OF', 'SF', 'ZF', 'AF', 'CF', 'PF']
 #digraph = functools.partial(gv.Digraph, format='svg', strict=False)
 
 JumpInstList = []
-posJumpList = []
+posJumpList = [
+'JA',
+'JAE',
+'JB',
+'JBE',
+'JC',
+'JCXZ',
+'JECXZ',
+'JE',
+'JG',
+'JGE',
+'JL',
+'JLE',
+'JNA',
+'JNAE',
+'JNB',
+'JNBE',
+'JNC',
+'JNE',
+'JNG',
+'JNGE',
+'JNL',
+'JNLE',
+'JNO',
+'JNP',
+'JNS',
+'JNZ',
+'JO',
+'JP',
+'JPE',
+'JPO',
+'JS',
+'JZ',
+'JA',
+'JAE',
+'JB',
+'JBE',
+'JC',
+'JE',
+'JZ',
+'JG',
+'JGE',
+'JL',
+'JLE',
+'JNA',
+'JNAE',
+'JNB',
+'JNBE',
+'JNC',
+'JNE',
+'JNG',
+'JNGE',
+'JNL',
+'JNLE',
+'JNO',
+'JNP',
+'JNS',
+'JNZ',
+'JO',
+'JP',
+'JPE',
+'JPO',
+'JS',
+'JZ',
+]
 
 nGraph = nx.DiGraph()
 
@@ -1043,20 +1107,20 @@ for idx, c in enumerate(instrEdges):
             #FlagRegList = [0newestOF, 1newestSF, 2newestZF, 3newestAF, 4newestCF, 5newestPF]
 
             if "jnz" in tempNodeStr:
-                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                addJumpEdge(FlagRegDict['ZF'], tempNodeStr, '(ZF)EndofSliceValue')
-                addJumpNode(tempNodeStr)
-                JumpInstList.append(tempNodeStr)
+                graphJump(tempNodeStr, ['ZF'])
+#                addJumpEdge(FlagRegDict['ZF'], tempNodeStr, '(ZF)EndofSliceValue')
+#                addJumpNode(tempNodeStr)
+#                JumpInstList.append(tempNodeStr)
             if "js" in tempNodeStr:
-                #nGraph.add_edge(FlagRegDict['SF'], tempNodeStr, label='(' + 'SF' +')')
-                addJumpEdge(FlagRegDict['SF'], tempNodeStr, '(SF)EndofSliceValue')
-                addJumpNode(tempNodeStr)
-                JumpInstList.append(tempNodeStr)
+                graphJump(tempNodeStr, ['SF'])
+#                addJumpEdge(FlagRegDict['SF'], tempNodeStr, '(SF)EndofSliceValue')
+#                addJumpNode(tempNodeStr)
+#                JumpInstList.append(tempNodeStr)
             if "jz" in tempNodeStr:
-                #nGraph.add_edge(FlagRegDict['ZF'], tempNodeStr, label='(' + 'ZF' +')')
-                addJumpEdge(FlagRegDict['ZF'], tempNodeStr, '(ZF)EndofSliceValue') 
-                addJumpNode(tempNodeStr)
-                JumpInstList.append(tempNodeStr)
+                graphJump(tempNodeStr, ['ZF'])
+#                addJumpEdge(FlagRegDict['ZF'], tempNodeStr, '(ZF)EndofSliceValue') 
+#                addJumpNode(tempNodeStr)
+#                JumpInstList.append(tempNodeStr)
 
 add_nodes(nGraph)
 
