@@ -26,7 +26,7 @@ memAddressNames = []
 nodeCount = -1
 instrEdges = []
 instrNodes = []
-instrNodesUniq = []
+#instrNodesUniq = []
 FlagRegDict = {}
 flagEnterKeys = 0
 
@@ -193,6 +193,11 @@ pinkInst = [
 'cmp'
 ]
 
+#syscall slice taint mem range instructions
+taintMem = [
+'MRange',
+]
+
 def open_file(filename):
     if sys.platform == "win32":
         os.startfile(filename)
@@ -334,13 +339,13 @@ with open(fileName) as oldfile:
             #if ('j' in splitLine[0]):
             #    jumpDict[splitLine[0]] = splitLine[0]
             #   print(jumpDict.keys())
-            addEdge = True
+
 
             #if not a system call in the cleanedExSlice then must be a normal slice Instruction 
             #and only add the first word + its line number as a single node 
             if (splitLine[0] != 'call') and ('MRange' not in splitLine[0]):
                 instrNodes.append('[' +str (k) + '] '+splitLine[0])
-                instrNodesUniq.append(splitLine[0])
+#                instrNodesUniq.append(splitLine[0])
                 
 
                 for idx, words in enumerate(splitLine):
@@ -359,6 +364,7 @@ with open(fileName) as oldfile:
                     tailMem = splitLine[2]
                     startMem = splitLine [1]
 
+                    instrNodes.append('[' +str (k) + '] '+splitLine[0])
 
                     tailMem = tailMem[1:(len(tailMem)-1)]
                     startMem = startMem[1:(len(startMem)-1)]
@@ -368,25 +374,29 @@ with open(fileName) as oldfile:
 
                     tntMemList = []
                     for i in range (tntMemRange):
-                        startMem = startMem +1
                         tntMemList.append('[' + str(hex(startMem)) + ']')
+                        startMem = startMem +1
+                        
+                    #print(tntMemList)
                     for tntMem in tntMemList:
                         tempEdgeList.append(tntMem)
+                        memAddressNames.append(tntMem)
+                        #print(tntMem)
+
                         #need to handle instructions using memory in these recorded ranges
                         #6-26 wes
-                    instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + str(len(tntMemList)))
                     
                       
 
 
                 else:
                     instrNodes.append('[' +str (k) + '] '+splitLine[0] + '-' + splitLine[1])
-                    instrNodesUniq.append(splitLine[1])
+ #                   instrNodesUniq.append(splitLine[1])
                     tempEdgeList.append("eax")
-            if(addEdge is True):
-                instrEdges.append(tempEdgeList)
-            else:
-                addEdge = True
+
+            instrEdges.append(tempEdgeList)
+            #print(tempEdgeList)
+
         k = k + 1
         
 print('Done! Instruction instrNodes List Size is : ') 
@@ -395,12 +405,14 @@ print(len(instrNodes))
 print('Done! Instruction Edges List size is : ')
 print(len(instrEdges))
 
-uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
+#uniqueInstrDict = {k: v for k, v in zip(instrNodesUniq, instrNodesUniq)}
+
 nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
 #example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
 print('Done! Dict (Nodes: Edges) is : ')
 #print("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
-print(len(nodeEdgesDict))
+#print(len(nodeEdgesDict))
+
 
 #this was to have user input manually check the nodeEdgesDict data structure 
 while (flagEnterKeys == 1):
@@ -418,6 +430,8 @@ while (flagEnterKeys == 1):
 #This block of code is hacky way to get rid of duplicates in memAddressNames
 memAddressDict = {k: v for k, v in zip(memAddressNames, memAddressNames)}
 memAddressNames = list(memAddressDict.keys())
+
+#print(memAddressDict)
 
 pattern = re.compile("^\s+|\s*,\s*|\s+$")
 for idx, c in enumerate(instrEdges):
@@ -888,7 +902,7 @@ for idx, c in enumerate(instrEdges):
                         if splitStr[idz] in (memAddressDict.keys()):
                             memAddressDict[splitStr[idz]] = instrNodes[idx]
         if idz == 0:
-               if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in tealInst) or any(x in tempNodeStr for x in greyInst)):
+                if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in tealInst) or any(x in tempNodeStr for x in greyInst)):
                     if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in tealInst)):
                         modifyESP(instrNodes[idx],instrNodes[idx],instrNodes[idx],instrNodes[idx])
                     #elif must be greyInst
@@ -901,6 +915,16 @@ for idx, c in enumerate(instrEdges):
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
                             memAddressDict[splitStr[idz]] = instrNodes[idx]
+                
+                
+        if(any(x in tempNodeStr for x in taintMem)):
+                    #print(tempNodeStr)
+                    #print(splitStr[idz])
+                    #print(memAddressDict.keys())
+
+                    if splitStr[idz] in (memAddressDict.keys()):
+                            memAddressDict[splitStr[idz]] = instrNodes[idx]
+                            print(memAddressDict[splitStr[idz]])            
         if idz == 1:     
         #iterate through the flags outputted (affected) by the instruction and do both:
         #update the flags with newest most recent values
@@ -1034,8 +1058,11 @@ for i in range(len(regList)):
 
 #go through all modified memory and hook each one as an end node which is the state of the system at the end of slice.
 for i in range(len(memAddressNames)):
+    #print('test123: ' + str(memAddressDict))
+    
     #some of the mem addresses in the memAddressNames are not modified by the slice, they are only input sources of memory 
     # this if statement makes sure we only add endpoint nodes/edges for modified memory addresses
+    print(((memAddressDict[memAddressNames[i]])))
     if '[0x' not in ((memAddressDict[memAddressNames[i]])): 
         addEndNode(memAddressNames[i])
         addEndEdge(memAddressDict[(memAddressNames[i])], memAddressNames[i], 'EndofSliceValue')
