@@ -131,6 +131,14 @@ jumpEdgeStats = {
     'color': 'red',
     'penwidth': '5',
 }
+
+uselessNodeStats = {
+    'shape': 'oval',
+    'style': 'filled',
+    'fillcolor': 'grey',
+    'penwidth': '1',
+    'fontcolor' : 'black',
+}
  
 statusFlags = [] 
 nGraph.add_node('ROOT')
@@ -236,7 +244,8 @@ tealInst = [
 
 # one source specified in slice AND one implicit source and one implicit destination output 
 redInst = [
-#MUL the explicit soure is specified in slice, and AX or DX:AX or EDX:EAX is the implicit source
+#MUL the explicit soure is specified in slice, and AL or AX or EAX is the implicit source.
+#'AX or DX:AX or EDX:EAX is the implicit output'
 'mul',
 ]
 
@@ -283,6 +292,12 @@ def graph_draw(graph):
 
 def addEndNode(name):
     nGraph.add_node(name, label = str(name), shape=endNodeStats['shape'],style=endNodeStats['style'], fillcolor = endNodeStats['fillcolor'], penwidth = endNodeStats['penwidth'])
+    return
+
+def addUselessNode(name):
+    edges = nodeEdgesDict[name]
+    #print(edges)
+    nGraph.add_node(name, label = str(name) + '(' + str(edges) + ')', shape=uselessNodeStats['shape'],style=uselessNodeStats['style'], fillcolor = uselessNodeStats['fillcolor'], penwidth = uselessNodeStats['penwidth'], fontcolor = uselessNodeStats['fontcolor'])
     return
 
 def addEndEdge(src, dst, name):
@@ -482,7 +497,7 @@ nodeEdgesDict = {k: v for k, v in zip(instrNodes, instrEdges)}
 #example dictionary entry is dict1['0-cmp': 'eax, 0xfffff001']
 print('Done! Dict (Nodes: Edges) is : ')
 #print("first node(instr): and its edges(operands): " + 'b7ff5c05-cmp: '+str(nodeEdgesDict['b7ff5c05-cmp']))
-#print(len(nodeEdgesDict))
+print(len(nodeEdgesDict))
 
 
 #this was to have user input manually check the nodeEdgesDict data structure 
@@ -724,6 +739,8 @@ for idx, c in enumerate(instrEdges):
         #PUSH IS NOT RIGHT>?
         if idz == 0:
                if (any(x in tempNodeStr for x in blueInst) or any(x in tempNodeStr for x in redInst) or any(x in tempNodeStr for x in greyInst)):
+                    
+
                     if 'eax' in splitStr[idz]:
                         for ido, k in enumerate(EAX):
                             nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
@@ -789,9 +806,20 @@ for idx, c in enumerate(instrEdges):
                     elif 'ebp' in splitStr[idz]:
                         for ido, k in enumerate(EBP):
                             nGraph.add_edge(k, tempNodeStr, label= k +'(ebp)'+str(ido))
+                        #6-29 hacky way to handle redInst with explicit 32bit (DOUBLEWORD) ebp source and implicit eax source
+                        if any (word in tempNodeStr for word in redInst):
+                            print(tempNodeStr)
+                            for ido, k in enumerate(EAX):
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(eax)'+str(ido))
+
                     elif 'bp' in splitStr[idz]:
                         for ido, k in enumerate(EBP[2:4]):
                             nGraph.add_edge(k, tempNodeStr, label= k +'(bp)'+str(ido))
+                        #6-29 hacky way to handle redInst with explicit 16bit (WORD) bp source and implicit ax source
+                        if any (word in tempNodeStr for word in redInst):
+                            print(tempNodeStr)
+                            for ido, k in enumerate(AX):
+                                nGraph.add_edge(k, tempNodeStr, label= k +'(ax)'+str(ido))
                     #
                     #esi edges
                     elif 'esi' in splitStr[idz]:
@@ -809,6 +837,7 @@ for idx, c in enumerate(instrEdges):
                         for ido, k in enumerate(EDI[2:4]):
                             nGraph.add_edge(k, tempNodeStr, label= k +'(di)'+str(ido))
                     #
+
                     else:
                         if splitStr[idz] in (memAddressDict.keys()):
                             for i in range(4):
@@ -995,7 +1024,7 @@ for idx, c in enumerate(instrEdges):
 
                     if splitStr[idz] in (memAddressDict.keys()):
                             memAddressDict[splitStr[idz]] = instrNodes[idx]
-                            print(memAddressDict[splitStr[idz]])            
+                            #print(memAddressDict[splitStr[idz]])            
         if idz == 1:     
         #iterate through the flags outputted (affected) by the instruction and do both:
         #update the flags with newest most recent values
@@ -1134,7 +1163,7 @@ for i in range(len(memAddressNames)):
     
     #some of the mem addresses in the memAddressNames are not modified by the slice, they are only input sources of memory 
     # this if statement makes sure we only add endpoint nodes/edges for modified memory addresses
-    print(((memAddressDict[memAddressNames[i]])))
+    #print(((memAddressDict[memAddressNames[i]])))
     if '[0x' not in ((memAddressDict[memAddressNames[i]])): 
         addEndNode(memAddressNames[i])
         addEndEdge(memAddressDict[(memAddressNames[i])], memAddressNames[i], 'EndofSliceValue')
@@ -1173,12 +1202,27 @@ nodeCount = len(nodeSet)
 toBeCleaned = allAncestors.symmetric_difference(nodeSet)
 removedCount = len(toBeCleaned)
 
+
+
 percentCleaned = removedCount / nodeCount
 
 print('percentRemoved(' + str(removedCount) + '/' + str(nodeCount) + '): ' +  str(percentCleaned))
 
 removedGraph= nGraph.subgraph(toBeCleaned)
-nGraph.remove_nodes_from(toBeCleaned)
+
+#take all the toBeCleanedNodes and mark them as useless and keep them in the graph.
+for entry in toBeCleaned:
+    if(entry != 'ROOT'):
+        addUselessNode(entry)
+    else:
+        nGraph.remove_node('ROOT')
+
+
+#we dont actually erase the extraneous nodes from the df graph, we simply mark them and continue 
+#to still output all of them as a subgraph called 'removedcleanedExGraph.pdf'
+#nGraph.remove_nodes_from(toBeCleaned)
+
+
 nx.drawing.nx_pydot.write_dot(removedGraph, 'removed'+outFileName)
 
 #6-16 late afternoon work

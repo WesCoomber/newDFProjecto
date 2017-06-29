@@ -24,6 +24,10 @@ call open_recheck
 call stat64_recheck 
 call open_recheck 
 call read_recheck 
+MRange,fstat64 [0xbfffef68] [0xbfffef70]
+MRange,fstat64 [0xbfffef50] [0xbfffef54]
+MRange,fstat64 [0xbfffef60] [0xbfffef64]
+MRange,fstat64 [0xbfffef58] [0xbfffef5c]
 call fstat64_recheck 
 
 mov edi dword ptr [0xbfffef68]	 
@@ -82,6 +86,10 @@ mov dword ptr [0xbffff49c] ecx
 mov ecx dword ptr [0xbffff49c]	 
 
 mov eax dword ptr [0xbffff4a0]	 
+MRange,fstat64 [0xbfffeec8] [0xbfffeed0]
+MRange,fstat64 [0xbfffeeb0] [0xbfffeeb4]
+MRange,fstat64 [0xbfffeec0] [0xbfffeec4]
+MRange,fstat64 [0xbfffeeb8] [0xbfffeebc]
 call fstat64_recheck 
 
 mov eax dword ptr [0xbffff4b4]	 
@@ -109,13 +117,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x6 
 push 0x0 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -125,13 +133,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x1 
 push 0x1 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -141,13 +149,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x2 
 push 0x2 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -157,13 +165,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x5 
 push 0x3 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -173,13 +181,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x1 
 push 0x4 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jnz jump_diverge 
 
@@ -237,13 +245,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x6 
 push 0x5 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -253,13 +261,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x1 
 push 0x6 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -269,13 +277,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x2 
 push 0x7 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -285,13 +293,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x5 
 push 0x8 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jz jump_diverge 
 mov eax ecx	 
@@ -301,13 +309,13 @@ shr edx 0x3
 lea eax [edx+edx*4]	 
 add eax eax	 
 sub ecx eax	 
-test edx edx	 
 pushfd 
 cmp ecx0x1 
 push 0x9 
 jne index_diverge 
 add esp 4 
 popfd 
+test edx edx	 
 mov ecx edx	 
 jnz jump_diverge 
 
